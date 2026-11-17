@@ -1,0 +1,2434 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Prompt Builder v 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Fullscreen Fixed Wallpaper Background (References 1000012342.png + Custom Upload Support) */
+        body {
+            background-color: #050505;
+            background-image: url('1000012342.png'), linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
+            background-size: cover;
+            background-position: center top;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: #ffffff;
+            font-family: 'Prompt', 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* 82% Translucent AMOLED Black Windows with Blur & Red Line Borders */
+        .amoled-glass-header {
+            background-color: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 2px solid #ef4444;
+        }
+
+        .amoled-window {
+            background-color: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #ffffff;
+            border: 2px solid #ef4444;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .amoled-subcard {
+            background-color: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: #ffffff;
+            border: 1.5px solid rgba(239, 68, 68, 0.85);
+        }
+
+        .amoled-actor-card {
+            background-color: rgba(10, 10, 10, 0.92);
+            color: #ffffff;
+            border: 1.5px solid #ef4444;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .amoled-input {
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #ffffff;
+            border: 1.5px solid rgba(239, 68, 68, 0.85);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .amoled-input:focus {
+            outline: none;
+            border-color: #ffffff;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.55);
+        }
+
+        .amoled-input::placeholder {
+            color: #9ca3af;
+        }
+
+        /* White Background & Vibrant Blue Border for All Character Dialogue Inputs */
+        .dialogue-white-blue-input {
+            background-color: #ffffff;
+            color: #000000;
+            border: 2px solid #2563eb;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .dialogue-white-blue-input:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.45);
+        }
+
+        .dialogue-white-blue-input::placeholder {
+            color: #6b7280;
+        }
+
+        /* Hide native browser number spinners on duration input so custom ▲/▼ buttons shine cleanly */
+        input.no-spinner::-webkit-outer-spin-button,
+        input.no-spinner::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input.no-spinner[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        select option, select optgroup {
+            background-color: #000000;
+            color: #ffffff;
+        }
+
+        /* Custom Red & Black Scrollbar */
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dc2626;
+            border-radius: 4px;
+            border: 1px solid #000000;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ef4444;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-red-600 selection:text-white">
+
+    <!-- Toast Notification Container (Replaces alert() safely) -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-[92vw]"></div>
+
+    <!-- Top Sticky Header -->
+    <header class="sticky top-0 z-40 amoled-glass-header shadow-2xl">
+        <div class="max-w-[1440px] mx-auto px-3 sm:px-5 lg:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
+            <!-- Brand Title -->
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-red-600 border-2 border-white flex items-center justify-center shrink-0 shadow-md">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-sm sm:text-lg font-extrabold tracking-tight text-white flex items-center gap-2 truncate">
+                        <span class="truncate">AI Video Prompt Builder</span>
+                        <span class="px-2 py-0.5 text-[11px] font-bold bg-red-600 text-white border border-white rounded-md shrink-0">v 2</span>
+                    </h1>
+                    <p class="text-[10px] sm:text-xs text-red-400 truncate">10 ฉาก • 5 ตัวละคร • 10 วัตถุ • 10 ลำดับเหตุการณ์ • จำกัด 15.0 วินาที</p>
+                </div>
+            </div>
+
+            <!-- Controls: Aspect Ratio, Wallpaper Upload, 15.0s Duration Meter, Reset -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Video Aspect Ratio Selector -->
+                <div class="bg-black/90 border border-red-500 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5" title="เลือกอัตราส่วนของวิดีโอ">
+                    <span class="text-[11px] font-bold text-red-400 whitespace-nowrap">📐 อัตราส่วน:</span>
+                    <select id="aspectRatioSelect" onchange="updateAspectRatio(this.value)" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[200px]">
+                        <optgroup label="แนวนอน (Horizontal / Landscape)">
+                            <option value="16:9" selected>16:9 (แนวนอนมาตรฐาน YouTube / Cinema)</option>
+                            <option value="21:9">21:9 (แนวนอนจอกว้างพิเศษ Ultra-Wide)</option>
+                            <option value="4:3">4:3 (แนวนอนคลาสสิก Classic TV)</option>
+                            <option value="3:2">3:2 (แนวนอนกล้องถ่ายภาพ Classic Photo)</option>
+                        </optgroup>
+                        <optgroup label="แนวตั้ง (Vertical / Portrait)">
+                            <option value="9:16">9:16 (แนวตั้ง TikTok / Reels / Shorts)</option>
+                            <option value="3:4">3:4 (แนวตั้งมาตรฐาน Vertical Portrait)</option>
+                            <option value="2:3">2:3 (แนวตั้งโปสเตอร์ Vertical Poster)</option>
+                        </optgroup>
+                        <optgroup label="สี่เหลี่ยมจัตุรัส (Square)">
+                            <option value="1:1">1:1 (สี่เหลี่ยมจัตุรัส Square)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <!-- Change Wallpaper Button -->
+                <label class="cursor-pointer px-2.5 py-1.5 rounded-xl bg-black/90 hover:bg-red-600 border border-red-500 text-xs font-semibold text-white transition-colors flex items-center gap-1.5 whitespace-nowrap" title="เปลี่ยนรูปภาพพื้นหลังหน้าจอ">
+                    <svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="hidden sm:inline">เปลี่ยนพื้นหลัง</span>
+                    <input type="file" accept="image/*" onchange="handleWallpaperUpload(event)" class="hidden">
+                </label>
+
+                <!-- Live 15.0s Duration Meter -->
+                <div id="headerDurationBox" class="bg-black/90 border-2 border-red-500 px-2.5 py-1 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap">
+                    <div>
+                        <div class="text-[9px] text-white/75 leading-none mb-0.5">ระยะเวลารวม</div>
+                        <div id="totalDurationText" class="text-xs sm:text-sm font-extrabold text-white leading-none">2.0s / 15.0s</div>
+                    </div>
+                    <span id="headerWarningIcon" class="hidden text-base" title="ความยาวเกิน 15.0 วินาที">⚠️</span>
+                </div>
+
+                <!-- Reset Button -->
+                <button type="button" onclick="resetAllData()" class="px-2.5 py-1.5 rounded-xl bg-black/90 hover:bg-red-600 border border-red-500 text-xs font-semibold text-white transition-colors flex items-center gap-1 whitespace-nowrap" title="รีเซ็ตข้อมูลทั้งหมด">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span class="hidden md:inline">รีเซ็ต</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Prominent Yellow-Icon Warning Banner (Triggered when total duration > 15.0s) -->
+    <div id="globalWarningBanner" class="hidden sticky top-[62px] z-30 bg-black/95 border-b-2 border-yellow-400 shadow-2xl backdrop-blur-md">
+        <div class="max-w-[1440px] mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-yellow-400/20 border-2 border-yellow-400 text-yellow-300 flex items-center justify-center font-extrabold text-lg shrink-0">
+                    ⚠️
+                </div>
+                <div>
+                    <h3 class="text-xs sm:text-sm font-bold text-yellow-300">
+                        ⚠️ แจ้งเตือน: ความยาววิดีโอรวมเกินกำหนด 15.0 วินาที (ไม่สามารถสร้าง Prompt ได้)
+                    </h3>
+                    <p id="warningBannerDetail" class="text-[11px] text-white/90">
+                        กรุณาลดระยะเวลาในแต่ละบรรทัดหรือลบบรรทัดเหตุการณ์ให้เวลารวมไม่เกิน 15.0 วินาที
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('timelineSection').scrollIntoView({behavior: 'smooth'})" class="px-3.5 py-1.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold text-xs shrink-0 transition-colors">
+                ไปปรับลดเวลา
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content Container (Balanced 1440px Max Width, 7:5 Grid on Desktop) -->
+    <main class="flex-1 max-w-[1440px] w-full mx-auto px-3 sm:px-5 lg:px-6 py-5">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+            <!-- Left Column (7 Cols): 1. Scene Library, 2. Character Roster, 3. Props & Objects, 4. Sequential Timeline -->
+            <div class="lg:col-span-7 space-y-5 min-w-0">
+
+                <!-- 1. Multi-Scene Library (Up to 10 Scenes) -->
+                <section class="amoled-window rounded-2xl p-4 sm:p-5 space-y-3.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/70 pb-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-7 h-7 rounded-lg bg-red-600 border border-white text-white flex items-center justify-center font-bold text-xs shrink-0">1</span>
+                            <div class="min-w-0">
+                                <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2 flex-wrap">
+                                    <span>คลังฉากหลัง (Scene Library)</span>
+                                    <span id="sceneCountBadge" class="text-[11px] font-bold bg-red-600 text-white border border-white px-2 py-0.5 rounded-full">1/10</span>
+                                </h2>
+                                <p class="text-[11px] text-white/80">อัปโหลดภาพฉากหลังได้สูงสุด 10 ฉาก พร้อมสภาพแสงสีและมุมกล้องที่หลากหลาย</p>
+                            </div>
+                        </div>
+                        <button type="button" id="addSceneBtn" onclick="addScene()" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-white hover:text-black border border-white text-white text-xs font-bold transition-all shrink-0">
+                            + เพิ่มฉาก (สูงสุด 10)
+                        </button>
+                    </div>
+
+                    <div id="sceneContainer" class="space-y-3">
+                        <!-- Scene cards rendered via JS -->
+                    </div>
+                </section>
+
+                <!-- 2. Character Roster (Up to 5 Characters, Mobile-Friendly Stacked Age Field) -->
+                <section class="amoled-window rounded-2xl p-4 sm:p-5 space-y-3.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/70 pb-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-7 h-7 rounded-lg bg-red-600 border border-white text-white flex items-center justify-center font-bold text-xs shrink-0">2</span>
+                            <div class="min-w-0">
+                                <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2 flex-wrap">
+                                    <span>โปรไฟล์ตัวละคร (Character Roster)</span>
+                                    <span id="charCountBadge" class="text-[11px] font-bold bg-red-600 text-white border border-white px-2 py-0.5 rounded-full">2/5</span>
+                                </h2>
+                                <p class="text-[11px] text-white/80">แยกช่องใบหน้า/รูปร่าง (ไม่เอาเสื้อผ้าเดิม) และเสื้อผ้า/เครื่องประดับครบทุกชิ้น</p>
+                            </div>
+                        </div>
+                        <button type="button" id="addCharBtn" onclick="addCharacter()" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-white hover:text-black border border-white text-white text-xs font-bold transition-all shrink-0">
+                            + เพิ่มตัวละคร (สูงสุด 5)
+                        </button>
+                    </div>
+
+                    <div id="characterContainer" class="space-y-3.5">
+                        <!-- Character cards rendered via JS -->
+                    </div>
+                </section>
+
+                <!-- 3. Props & Objects Library (Up to 10 Objects) -->
+                <section class="amoled-window rounded-2xl p-4 sm:p-5 space-y-3.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/70 pb-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-7 h-7 rounded-lg bg-red-600 border border-white text-white flex items-center justify-center font-bold text-xs shrink-0">3</span>
+                            <div class="min-w-0">
+                                <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2 flex-wrap">
+                                    <span>คลังวัตถุสิ่งของ (Props & Objects)</span>
+                                    <span id="propCountBadge" class="text-[11px] font-bold bg-red-600 text-white border border-white px-2 py-0.5 rounded-full">1/10</span>
+                                </h2>
+                                <p class="text-[11px] text-white/80">อัปโหลดรูปภาพวัตถุสิ่งของและกำหนดคำสั่งตำแหน่งการวางไว้ในส่วนต่างๆ ของฉาก</p>
+                            </div>
+                        </div>
+                        <button type="button" id="addPropBtn" onclick="addProp()" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-white hover:text-black border border-white text-white text-xs font-bold transition-all shrink-0">
+                            + เพิ่มวัตถุสิ่งของ (สูงสุด 10)
+                        </button>
+                    </div>
+
+                    <div id="propContainer" class="space-y-3">
+                        <!-- Prop cards rendered via JS -->
+                    </div>
+                </section>
+
+                <!-- 4. Sequential Action Timeline (Up to 10 Rows, Independent Per-Actor Controls & Unison Speech Option) -->
+                <section id="timelineSection" class="amoled-window rounded-2xl p-4 sm:p-5 space-y-3.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/70 pb-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-7 h-7 rounded-lg bg-red-600 border border-white text-white flex items-center justify-center font-bold text-xs shrink-0">4</span>
+                            <div class="min-w-0">
+                                <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2 flex-wrap">
+                                    <span>ลำดับเหตุการณ์และการแสดง (Timeline)</span>
+                                    <span id="timelineCountBadge" class="text-[11px] font-bold bg-red-600 text-white border border-white px-2 py-0.5 rounded-full">1/10</span>
+                                </h2>
+                                <p class="text-[11px] text-white/80">เลือกพูดเรียงตามลำดับหรือพูดพร้อมกัน • ตั้งค่าอารมณ์ สีหน้า ท่าทาง และสายตาแยกอิสระรายตัวละคร</p>
+                            </div>
+                        </div>
+                        <button type="button" id="addTimelineBtn" onclick="addTimelineRow()" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-white hover:text-black border border-white text-white text-xs font-bold transition-all shrink-0">
+                            + เพิ่มบรรทัดเหตุการณ์ (สูงสุด 10)
+                        </button>
+                    </div>
+
+                    <!-- Real-time 15.0s Progress Meter -->
+                    <div class="amoled-subcard rounded-xl p-3 space-y-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-white/90 font-medium">แถบวัดความยาววิดีโอ (จำกัดสูงสุด 15.0 วินาที)</span>
+                            <span id="timelineProgressLabel" class="font-bold text-white">2.0s / 15.0s</span>
+                        </div>
+                        <div class="w-full h-2 bg-black border border-red-500 rounded-full overflow-hidden">
+                            <div id="timelineProgressBar" class="h-full bg-red-600 transition-all duration-300" style="width: 13%;"></div>
+                        </div>
+                    </div>
+
+                    <div id="timelineContainer" class="space-y-4">
+                        <!-- Timeline rows rendered via JS -->
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Right Column (5 Cols): Sticky Prompt Output & Reference Gallery -->
+            <div class="lg:col-span-5 min-w-0">
+                <section class="amoled-window rounded-2xl p-4 sm:p-5 lg:sticky lg:top-20 space-y-4">
+                    <div class="flex items-center justify-between gap-2 border-b border-red-500 pb-3">
+                        <div class="min-w-0">
+                            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                                <span class="text-red-500">✦</span>
+                                <span>ผลลัพธ์ชุดคำสั่ง (Prompt Output)</span>
+                            </h2>
+                            <p id="outputAspectSummary" class="text-[11px] text-white/80 truncate">อัตราส่วน 16:9 • พร้อมคัดลอกไปใช้งาน</p>
+                        </div>
+                        <button type="button" id="generatePromptBtn" onclick="generatePrompts(true)" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-white hover:text-black border border-white text-white text-xs font-bold transition-all shrink-0">
+                            🔄 สร้าง Prompt
+                        </button>
+                    </div>
+
+                    <!-- Over-limit Blocking Card -->
+                    <div id="outputWarningCard" class="hidden p-3.5 rounded-xl bg-black border-2 border-yellow-400 flex items-start gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-yellow-400/20 border border-yellow-400 text-yellow-300 flex items-center justify-center font-extrabold text-base shrink-0">
+                            ⚠️
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-yellow-300">⚠️ ล็อกการสร้าง Prompt (เกิน 15.0 วินาที)</h4>
+                            <p class="text-[11px] text-white/90 mt-1">กรุณาลดระยะเวลาในตารางลำดับเหตุการณ์ด้านซ้ายให้รวมกันไม่เกิน 15.0 วินาที ปุ่มสร้าง Prompt จะปลดล็อกให้อัตโนมัติ</p>
+                        </div>
+                    </div>
+
+                    <!-- Prompt Outputs Wrapper -->
+                    <div id="promptOutputsWrapper" class="space-y-3.5">
+                        <!-- Optional Director Notes -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-white mb-1">คำสั่งกำกับภาพรวมเพิ่มเติม (Optional Director Notes)</label>
+                            <input type="text" id="directorNotesInput" oninput="generatePrompts()" placeholder="เช่น ภาพคมชัด 4K แสงสีสมจริงแบบภาพยนตร์..." class="amoled-input w-full rounded-xl px-3 py-2 text-xs">
+                        </div>
+
+                        <!-- English Prompt -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold text-red-400">English Prompt (สำหรับ Google Flow / Veo)</span>
+                                <button type="button" onclick="copyText('enPromptOutput', 'English Prompt')" class="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-white hover:text-black border border-white text-white text-[11px] font-bold transition-colors">
+                                    คัดลอก EN
+                                </button>
+                            </div>
+                            <textarea id="enPromptOutput" readonly rows="9" class="amoled-input w-full rounded-xl p-3 text-xs font-mono leading-relaxed resize-y max-h-[280px]"></textarea>
+                        </div>
+
+                        <!-- Thai Summary -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold text-white">สรุปบทและคำสั่งภาษาไทย (Thai Summary)</span>
+                                <button type="button" onclick="copyText('thPromptOutput', 'สรุปภาษาไทย')" class="px-2.5 py-1 rounded-lg bg-black hover:bg-red-600 border border-red-500 text-white text-[11px] font-bold transition-colors">
+                                    คัดลอก TH
+                                </button>
+                            </div>
+                            <textarea id="thPromptOutput" readonly rows="8" class="amoled-input w-full rounded-xl p-3 text-xs leading-relaxed resize-y max-h-[240px]"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Uploaded Reference Assets Summary -->
+                    <div class="border-t border-red-500 pt-3.5 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-white">รูปภาพอ้างอิงที่อัปโหลดไว้ (คลิกเพื่อดาวน์โหลด)</span>
+                            <span id="assetCountLabel" class="text-[11px] font-bold text-red-400">0 รูป</span>
+                        </div>
+                        <div id="assetsPreviewContainer" class="grid grid-cols-3 gap-2">
+                            <!-- Asset thumbnails injected dynamically -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // =========================================================================
+        // Constants & Configuration Options (v 1.6 Expanded Library)
+        // =========================================================================
+        const MAX_SCENES = 10;
+        const MAX_CHARACTERS = 5;
+        const MAX_PROPS = 10;
+        const MAX_TIMELINE_ROWS = 10;
+        const MAX_DURATION = 15.0;
+
+        const ASPECT_RATIOS = [
+            { val: '16:9', th: '16:9 (แนวนอนมาตรฐาน YouTube / Cinema)', en: '16:9 widescreen horizontal cinematic aspect ratio' },
+            { val: '9:16', th: '9:16 (แนวตั้ง TikTok / Reels / Shorts)', en: '9:16 vertical portrait mobile aspect ratio' },
+            { val: '21:9', th: '21:9 (แนวนอนจอกว้างพิเศษ Ultra-Wide)', en: '21:9 ultra-wide anamorphic cinema aspect ratio' },
+            { val: '4:3', th: '4:3 (แนวนอนคลาสสิก Classic TV)', en: '4:3 classic standard horizontal aspect ratio' },
+            { val: '3:4', th: '3:4 (แนวตั้งมาตรฐาน Vertical Portrait)', en: '3:4 vertical portrait aspect ratio' },
+            { val: '1:1', th: '1:1 (สี่เหลี่ยมจัตุรัส Square)', en: '1:1 square aspect ratio' },
+            { val: '2:3', th: '2:3 (แนวตั้งโปสเตอร์ Vertical Poster)', en: '2:3 vertical poster photo aspect ratio' },
+            { val: '3:2', th: '3:2 (แนวนอนกล้องถ่ายภาพ Classic Photo)', en: '3:2 classic 35mm horizontal photo aspect ratio' }
+        ];
+
+        const PROP_PLACEMENTS = [
+            { val: 'foreground_table', th: 'วางบนโต๊ะด้านหน้าฉาก (On foreground table)', en: 'placed prominently on the table in the foreground of the scene' },
+            { val: 'center_scene', th: 'วางอยู่ตรงกลางฉาก (Placed in the center of the scene)', en: 'placed prominently right in the center of the scene' },
+            { val: 'left_side', th: 'วางอยู่มุมซ้ายของฉาก (On the left side of the scene)', en: 'positioned on the left side of the scene' },
+            { val: 'right_side', th: 'วางอยู่มุมขวาของฉาก (On the right side of the scene)', en: 'positioned on the right side of the scene' },
+            { val: 'background_shelf', th: 'วางประดับฉากหลัง / ชั้นวาง (In the background / on shelf)', en: 'placed naturally on a shelf/surface in the background of the scene' },
+            { val: 'ground_floor', th: 'วางอยู่บนพื้นฉาก (Resting on the ground/floor)', en: 'resting naturally on the ground/floor of the scene' },
+            { val: 'held_by_character', th: 'ถืออยู่ในมือของตัวละคร (Held in character\'s hand)', en: 'held clearly in the active character\'s hand' },
+            { val: 'floating_midair', th: 'ลอยอยู่กลางอากาศในฉาก (Floating in mid-air)', en: 'floating dramatically in mid-air within the scene' },
+            { val: 'custom_only', th: 'กำหนดตำแหน่งเองในช่องคำสั่งด้านล่าง (Custom placement)', en: '' }
+        ];
+
+        // Dialogue Delivery Mode: Sequential vs Simultaneous (Speak Together in Unison)
+        const DIALOGUE_MODES = [
+            {
+                val: 'sequential',
+                th: 'พูดเรียงตามลำดับ (Sequential)',
+                descTh: 'ตัวละครพูดต่อกันทีละคนตามลำดับที่ติ๊กเลือก'
+            },
+            {
+                val: 'simultaneous',
+                th: 'พูดพร้อมกัน (Speak Together)',
+                descTh: 'ตัวละครที่เลือกทั้งหมดพูดพร้อมกันในเวลาเดียวกัน'
+            }
+        ];
+
+        const SPEECH_TIMINGS = [
+            { val: 'before', th: 'พูดก่อนกริยาท่าทาง (Speak BEFORE action)', shortTh: 'พูดก่อนท่าทาง' },
+            { val: 'during', th: 'พูดพร้อมกับกริยาท่าทาง (Speak WITH action)', shortTh: 'พูดพร้อมท่าทาง' },
+            { val: 'after', th: 'พูดหลังกริยาท่าทาง (Speak AFTER action)', shortTh: 'พูดหลังท่าทาง' }
+        ];
+
+        const OPTIONS = {
+            lightingGroups: [
+                {
+                    group: 'แสงธรรมชาติ (Natural Lighting)',
+                    items: [
+                        { th: 'แสงธรรมชาติกลางวัน (Natural Daylight)', en: 'bright natural daylight' },
+                        { th: 'แสงสีทองยามเย็น (Golden Hour Sunset)', en: 'warm golden hour sunset lighting with long shadows' },
+                        { th: 'แสงทไวไลท์สีน้ำเงิน (Blue Hour Twilight)', en: 'cool blue hour twilight dusk lighting' },
+                        { th: 'แสงนุ่มนวลวันฟ้าครึ้ม (Overcast Diffused)', en: 'soft overcast diffused natural light' },
+                        { th: 'แสงแดดจ้าตอนเที่ยง (Harsh Midday Sun)', en: 'harsh bright midday sunlight with crisp shadows' },
+                        { th: 'แสงหมอกยามเช้า (Soft Morning Mist)', en: 'ethereal soft morning mist lighting' },
+                        { th: 'แสงจันทร์ยามค่ำคืน (Moonlight Night)', en: 'silvery cool moonlight night illumination' }
+                    ]
+                },
+                {
+                    group: 'แสงภาพยนตร์และสตูดิโอ (Cinematic & Studio)',
+                    items: [
+                        { th: 'แสงสตูดิโอภาพยนตร์ (Cinematic Studio)', en: 'cinematic three-point studio lighting' },
+                        { th: 'แสงเงาตัดกันเข้มข้น (Chiaroscuro High-Contrast)', en: 'dramatic chiaroscuro high-contrast light and shadow' },
+                        { th: 'แสงย้อนขอบตัวละคร (Rim Light / Silhouette)', en: 'glowing rim lighting and backlit silhouette' },
+                        { th: 'ลำแสงทะลุหมอก/หน้าต่าง (Volumetric God Rays)', en: 'volumetric god rays piercing through the air' },
+                        { th: 'แสงซอฟต์บ็อกซ์ผิวสวย (Softbox Beauty Light)', en: 'flattering softbox beauty lighting' },
+                        { th: 'ไฟสปอตไลต์ส่องเฉพาะจุด (Dramatic Spotlight)', en: 'dramatic isolated stage spotlight' }
+                    ]
+                },
+                {
+                    group: 'แสงสีและบรรยากาศนีออน (Colored & Neon)',
+                    items: [
+                        { th: 'แสงนีออนไซเบอร์พังก์ (Neon Cyberpunk Pink/Cyan)', en: 'vibrant pink and cyan neon cyberpunk night lighting' },
+                        { th: 'แสงเทียนสีส้มอบอุ่น (Warm Amber Candlelight)', en: 'warm flickering amber candlelight glow' },
+                        { th: 'แสงสีฟ้าไซไฟเย็นยะเยือก (Cold Sci-Fi Blue)', en: 'cold futuristic sci-fi blue lighting' },
+                        { th: 'แสงไฟเตือนสีแดงเข้ม (Crimson Red Alert Glow)', en: 'intense crimson red alert atmospheric glow' },
+                        { th: 'แสงเรืองรองสีเขียวมรกต (Emerald Forest Glow)', en: 'mystical emerald green ambient glow' },
+                        { th: 'แสงพาสเทลชวนฝัน (Pastel Dreamy Glow)', en: 'soft pastel dreamy iridescent lighting' },
+                        { th: 'แสงทูโทนแดง-น้ำเงิน (Bi-color Red & Blue)', en: 'dramatic bi-color red and blue split lighting' }
+                    ]
+                }
+            ],
+            defaultCameraAngles: [
+                { th: 'มุมกว้างสุดลูกหูลูกตา (Extreme Wide Shot - EWS)', en: 'extreme wide establishing shot showing vast environment' },
+                { th: 'มุมกว้างเห็นบรรยากาศ (Wide Shot - WS)', en: 'wide full-scene shot' },
+                { th: 'มุมเต็มตัวตั้งแต่หัวจรดเท้า (Full Body Shot)', en: 'full body shot from head to toe' },
+                { th: 'มุมระดับเข่าขึ้นไป (Cowboy / American Shot)', en: 'medium-wide cowboy shot from mid-thigh up' },
+                { th: 'มุมปานกลางครึ่งตัว (Medium Shot - MS)', en: 'medium waist-up shot' },
+                { th: 'มุมใกล้ระดับหน้าอก (Medium Close-Up - MCU)', en: 'medium close-up chest-up shot' },
+                { th: 'มุมโคลสอัปใบหน้า (Close-Up - CU)', en: 'close-up portrait shot' },
+                { th: 'มุมโคลสอัปเจาะลึกพิเศษ (Extreme Close-Up - ECU)', en: 'extreme close-up detail shot' },
+                { th: 'มุมเสยต่ำทรงพลัง (Low Angle Heroic)', en: 'dramatic low angle shot looking upward' },
+                { th: 'มุมกดจากด้านบน (High Angle)', en: 'high angle shot looking downward' },
+                { th: 'มุมมองนกจากบนฟ้า (Bird\'s-Eye / Top-Down)', en: 'overhead bird\'s-eye top-down view' },
+                { th: 'มุมมองจากพื้นดิน (Worm\'s-Eye View)', en: 'extreme ground-level worm\'s-eye view' },
+                { th: 'มุมกล้องเอียงสร้างความตื่นเต้น (Dutch Angle)', en: 'tilted Dutch angle shot' },
+                { th: 'มุมมองข้ามไหล่ (Over-the-Shoulder - OTS)', en: 'over-the-shoulder perspective shot' },
+                { th: 'มุมมองสายตาตัวละคร (Point of View - POV)', en: 'first-person point-of-view (POV) shot' },
+                { th: 'มุมถ่ายคู่สองตัวละคร (Two-Shot)', en: 'balanced two-shot framing both characters' }
+            ],
+            transitions: [
+                { th: 'ต่อเนื่องจากฉากเดิม (Continuous / No Cut)', en: 'continuous seamless action without cut' },
+                { th: 'ตัดภาพฉับไว (Hard Cut)', en: 'sharp hard cut transition' },
+                { th: 'ค่อยๆ จางซ้อนภาพ (Cross Dissolve)', en: 'smooth cross-dissolve fade transition' },
+                { th: 'แพนกล้องเหวี่ยงซ้าย/ขวาเปลี่ยนฉาก (Whip Pan)', en: 'dynamic high-speed whip-pan camera transition' },
+                { th: 'พุ่งซูมเข้าเปลี่ยนฉาก (Crash Zoom In)', en: 'dramatic crash zoom-in transition' },
+                { th: 'ดึงซูมออกเปลี่ยนฉาก (Crash Zoom Out)', en: 'rapid crash zoom-out transition' },
+                { th: 'วูบผ่านวัตถุเปลี่ยนฉาก (Object Wipe / Pass-by)', en: 'seamless foreground object wipe pass-by transition' },
+                { th: 'หมุนกล้องควงสว่าน 360° (Spin / Swirl)', en: 'dynamic 360-degree camera spin/swirl transition' },
+                { th: 'แฟลชแสงสีขาววาบ (Flash White)', en: 'bright white flash transition' },
+                { th: 'ค่อยๆ มืดลงแล้วเปิดฉากใหม่ (Fade to Black)', en: 'cinematic fade to black transition' },
+                { th: 'เอฟเฟกต์ภาพดิจิทัลกระตุก (Glitch Transition)', en: 'digital glitch distortion transition' },
+                { th: 'ตัดต่อเชื่อมท่าทางต่อเนื่อง (Match Cut)', en: 'seamless visual match cut transition' }
+            ],
+            emotions: [
+                { th: 'มีความสุข / ร่าเริง (Joyful)', en: 'joyful and cheerful' },
+                { th: 'โกรธเกรี้ยว / เดือดดาล (Angry)', en: 'angry and furious' },
+                { th: 'เศร้าเสียใจ / ผิดหวัง (Sad)', en: 'sad and sorrowful' },
+                { th: 'ตกใจ / ประหลาดใจ (Surprised)', en: 'shocked and surprised' },
+                { th: 'เรียบเฉย / สงบนิ่ง (Neutral)', en: 'calm and neutral' },
+                { th: 'ตื่นเต้น / กระตือรือร้น (Excited)', en: 'excited and enthusiastic' },
+                { th: 'หวาดกลัว / กังวล (Fearful)', en: 'fearful and anxious' },
+                { th: 'มั่นใจ / ภาคภูมิใจ (Confident)', en: 'confident and proud' },
+                { th: 'ครุ่นคิด / สงสัย (Thoughtful)', en: 'thoughtful and curious' },
+                { th: 'ขี้เล่น / อารมณ์ดี (Playful)', en: 'playful and lighthearted' },
+                { th: 'เขินอาย / ประหม่า (Shy / Bashful)', en: 'shy and slightly blushing' },
+                { th: 'มุ่งมั่น / ดุดัน (Fierce / Determined)', en: 'fierce and intensely determined' }
+            ],
+            expressions: [
+                { th: 'ยิ้มอบอุ่นจริงใจ (Smiling warmly)', en: 'smiling warmly' },
+                { th: 'ขมวดคิ้วเคร่งเครียด (Frowning deeply)', en: 'frowning deeply' },
+                { th: 'เบิกตากว้างตกใจ (Wide-eyed surprise)', en: 'wide-eyed in surprise' },
+                { th: 'สีหน้าสงบนิ่ง (Calm and serene)', en: 'calm and serene facial expression' },
+                { th: 'ยิ้มมุมปากมีเลศนัย (Smirking)', en: 'smirking slyly' },
+                { th: 'น้ำตาคลอ / ร้องไห้ (Crying)', en: 'teary-eyed and crying' },
+                { th: 'หัวเราะร่าเริง (Laughing out loud)', en: 'laughing out loud' },
+                { th: 'สายตามุ่งมั่นจริงจัง (Determined look)', en: 'determined intense look' },
+                { th: 'ขยิบตาขี้เล่น (Winking playfully)', en: 'winking playfully' },
+                { th: 'เม้มปากกลั้นอารมณ์ (Pursing lips)', en: 'pursing lips thoughtfully' }
+            ],
+            soloActionGroups: [
+                {
+                    group: 'ท่าทางพื้นฐานและการเคลื่อนไหว (Movement & Posture)',
+                    items: [
+                        { th: 'ยืนสง่าอย่างมั่นใจ (Standing confidently)', en: 'standing tall with confident posture' },
+                        { th: 'เดินก้าวไปข้างหน้าช้าๆ (Walking forward slowly)', en: 'walking forward slowly and gracefully' },
+                        { th: 'เดินก้าวฉับไวอย่างมีเป้าหมาย (Striding purposefully)', en: 'striding forward purposefully' },
+                        { th: 'วิ่งไปข้างหน้าอย่างรวดเร็ว (Running fast)', en: 'running forward dynamically' },
+                        { th: 'หันหลังกลับอย่างรวดเร็ว (Turning around abruptly)', en: 'turning around abruptly' },
+                        { th: 'นั่งลงอย่างสง่างาม (Sitting gracefully)', en: 'sitting down gracefully' },
+                        { th: 'ยืนพิงกำแพงอย่างผ่อนคลาย (Leaning against wall)', en: 'leaning casually against a wall' },
+                        { th: 'คุกเข่าลงกับพื้น (Kneeling down)', en: 'kneeling down on the ground' },
+                        { th: 'กระโดดตัวลอยด้วยความดีใจ (Jumping with joy)', en: 'jumping up into the air with joy' }
+                    ]
+                },
+                {
+                    group: 'ท่าทางมือและศีรษะ (Hand & Head Gestures)',
+                    items: [
+                        { th: 'ยกมือโบกทักทาย (Waving hands to greet)', en: 'waving hands warmly in greeting' },
+                        { th: 'ยืนกอดอกครุ่นคิด (Crossing arms)', en: 'standing with arms crossed' },
+                        { th: 'เท้าสะเอวอย่างมั่นใจ (Hands on hips)', en: 'standing with hands on hips' },
+                        { th: 'ชี้นิ้วไปข้างหน้า (Pointing forward)', en: 'pointing a finger forward decisively' },
+                        { th: 'ยกมือปิดปากด้วยความตกใจ (Covering mouth in shock)', en: 'covering mouth with hands in shock' },
+                        { th: 'เกาหัวด้วยความงุนงง (Scratching head confused)', en: 'scratching head in confusion' },
+                        { th: 'พยักหน้าเห็นด้วย (Nodding in agreement)', en: 'nodding head in agreement' },
+                        { th: 'ส่ายหน้าปฏิเสธ (Shaking head no)', en: 'shaking head in refusal' },
+                        { th: 'ยกนิ้วโป้งเยี่ยมยอด (Giving thumbs up)', en: 'giving an enthusiastic thumbs up' },
+                        { th: 'ปรบมือชื่นชม (Clapping hands)', en: 'clapping hands together' },
+                        { th: 'เสยผมอย่างมีเสน่ห์ (Flipping hair)', en: 'flipping hair back smoothly' }
+                    ]
+                },
+                {
+                    group: 'ท่าทางแอ็กชันและอารมณ์เข้มข้น (Action & Dramatic)',
+                    items: [
+                        { th: 'ตั้งท่าเตรียมต่อสู้ (Battle ready stance)', en: 'taking a dynamic battle-ready stance' },
+                        { th: 'เอียงตัวหลบอย่างว่องไว (Dodging swiftly)', en: 'dodging swiftly to the side' },
+                        { th: 'กำหมัดแน่นด้วยความมุ่งมั่น (Clenching fists tightly)', en: 'clenching fists tightly with determination' },
+                        { th: 'ทรุดตัวลงคุกเข่า (Falling to knees)', en: 'falling dramatically to knees' },
+                        { th: 'ยื่นมือออกมาทางกล้อง (Reaching hand out toward camera)', en: 'reaching a hand out toward the camera' },
+                        { th: 'เหลียวหลังมองข้ามไหล่ (Looking back over shoulder)', en: 'looking back over shoulder' },
+                        { th: 'เต้นรำอย่างมีชีวิตชีวา (Dancing energetically)', en: 'dancing energetically to rhythm' },
+                        { th: 'โค้งคำนับอย่างนอบน้อม (Bowing respectfully)', en: 'bowing respectfully' }
+                    ]
+                }
+            ],
+            groupActionGroups: [
+                {
+                    group: 'ปฏิกิริยาโต้ตอบและพูดคุย (Conversation & Social)',
+                    items: [
+                        { th: '[ร่วมกัน] ยืนล้อมวงพูดคุยกันอย่างออกรส', en: 'standing together in a lively group conversation' },
+                        { th: '[ร่วมกัน] หันหน้าประจันหน้าคุยกัน', en: 'standing face-to-face talking directly to each other' },
+                        { th: '[ร่วมกัน] โน้มตัวกระซิบข้างหูกัน', en: 'leaning in close to whisper into each other\'s ear' },
+                        { th: '[ร่วมกัน] หัวเราะร่าเริงพร้อมกัน', en: 'laughing joyfully together in unison' },
+                        { th: '[ร่วมกัน] ชี้หน้าโต้เถียงกันอย่างดุเดือด', en: 'pointing fingers and arguing intensely face-to-face' },
+                        { th: '[ร่วมกัน] พยักหน้าเห็นด้วยพร้อมกัน', en: 'nodding in mutual agreement together' }
+                    ]
+                },
+                {
+                    group: 'ปฏิกิริยาทางกายและมิตรภาพ (Physical & Friendly)',
+                    items: [
+                        { th: '[ร่วมกัน] แปะมือไฮไฟว์ (High-five)', en: 'giving each other an enthusiastic high-five' },
+                        { th: '[ร่วมกัน] ชนหมัดกัน (Fist bump)', en: 'exchanging a friendly fist bump' },
+                        { th: '[ร่วมกัน] กอดคอกันเดินเคียงข้าง', en: 'walking side-by-side with arms around each other\'s shoulders' },
+                        { th: '[ร่วมกัน] สวมกอดให้กำลังใจกันอย่างอบอุ่น', en: 'hugging each other warmly in support' },
+                        { th: '[ร่วมกัน] จับมือกันแน่น', en: 'holding hands tightly together' },
+                        { th: '[ร่วมกัน] ตบไหล่ปลอบใจหรือชื่นชม', en: 'patting each other\'s shoulder encouragingly' },
+                        { th: '[ร่วมกัน] ชนแก้วฉลองด้วยกัน', en: 'clinking glasses together in celebration' }
+                    ]
+                },
+                {
+                    group: 'ปฏิกิริยาแอ็กชันและเผชิญหน้า (Action & Tension)',
+                    items: [
+                        { th: '[ร่วมกัน] หันหลังชนกันเตรียมรับมือ', en: 'standing back-to-back in a defensive ready stance' },
+                        { th: '[ร่วมกัน] วิ่งหนีไปพร้อมกันอย่างตื่นตระหนก', en: 'running away together in sync' },
+                        { th: '[ร่วมกัน] ตกใจหันขวับมามองหน้ากัน', en: 'turning sharply to look at each other in shock' },
+                        { th: '[ร่วมกัน] จ้องตากันอย่างตึงเครียด', en: 'locking eyes in an intense standoff' },
+                        { th: '[ร่วมกัน] เดินสวนทางกันแล้วหันกลับมามอง', en: 'walking past each other and turning back to look' },
+                        { th: '[ร่วมกัน] ยืนเรียงหน้ากระดานโพสท่าเท่ๆ', en: 'standing side-by-side in a cool heroic group pose' }
+                    ]
+                }
+            ],
+            voices: [
+                { th: 'นุ่มนวลเป็นมิตร (Soft and friendly)', en: 'soft and friendly voice' },
+                { th: 'ทุ้มลึกน่าเชื่อถือ (Deep and authoritative)', en: 'deep and authoritative voice' },
+                { th: 'สดใสกระตือรือร้น (Energetic and bright)', en: 'energetic and bright tone' },
+                { th: 'สุขุมเยือกเย็น (Calm and steady)', en: 'calm and steady voice' },
+                { th: 'กระซิบเบาๆ (Whispering)', en: 'quiet whispering tone' },
+                { th: 'ดังก้องตื่นเต้น (Loud and excited)', en: 'loud and excited voice' },
+                { th: 'จริงจังดราม่า (Dramatic)', en: 'dramatic emotional tone' }
+            ],
+            staticGazes: [
+                { val: 'camera', th: 'มองตรงมาที่กล้อง (Direct eye contact to camera)', en: 'making direct eye contact with the camera' },
+                { val: 'each_other', th: 'มองหน้าสบตากันเอง (Looking at each other)', en: 'looking into each other\'s eyes' },
+                { val: 'left', th: 'มองไปทางซ้าย (Looking left)', en: 'looking toward the left' },
+                { val: 'right', th: 'มองไปทางขวา (Looking right)', en: 'looking toward the right' },
+                { val: 'down', th: 'มองต่ำ / ก้มหน้า (Looking down)', en: 'looking downward' },
+                { val: 'up', th: 'มองขึ้นด้านบน (Looking up)', en: 'looking upward' },
+                { val: 'away', th: 'หลบสายตา / เหม่อมองไกล (Looking away thoughtfully)', en: 'gazing thoughtfully into the distance' }
+            ],
+            cameraZooms: [
+                { val: 'none', th: 'ไม่ซูม (None)', en: '' },
+                { val: 'smooth_zoom_in', th: 'ซูมเข้าอย่างนุ่มนวล (Smooth Zoom In)', en: 'smooth slow zoom-in' },
+                { val: 'fast_zoom_in', th: 'ซูมเข้าอย่างรวดเร็ว (Fast Zoom In)', en: 'fast zoom-in' },
+                { val: 'crash_zoom_in', th: 'พุ่งซูมกระแทกเข้าใกล้ (Crash Zoom In)', en: 'dramatic crash zoom-in' },
+                { val: 'slow_zoom_out', th: 'ซูมออกช้าๆ เปิดมุมกว้าง (Slow Zoom Out)', en: 'slow pull-back zoom-out' },
+                { val: 'fast_zoom_out', th: 'ซูมออกอย่างรวดเร็ว (Fast Zoom Out)', en: 'fast zoom-out' },
+                { val: 'dolly_in', th: 'ดอลลี่เคลื่อนกล้องเข้าไปหา (Dolly Push In)', en: 'cinematic dolly push-in toward subject' },
+                { val: 'dolly_out', th: 'ดอลลี่ถอยกล้องออกห่าง (Dolly Pull Back)', en: 'cinematic dolly pull-back away from subject' },
+                { val: 'dolly_zoom', th: 'ดอลลี่ซูมฉากหลังบิดเบี้ยว (Dolly Zoom / Vertigo)', en: 'dramatic Hitchcock dolly zoom vertigo effect' }
+            ],
+            cameraMoves: [
+                { val: 'none', th: 'กล้องนิ่ง (None / Static)', en: 'steady static camera' },
+                { val: 'pan_left_15', th: 'แพนกล้องซ้าย 15° (Pan Left 15°)', en: 'subtle horizontal camera pan 15 degrees left' },
+                { val: 'pan_left_30', th: 'แพนกล้องซ้าย 30° (Pan Left 30°)', en: 'horizontal camera pan 30 degrees left' },
+                { val: 'pan_left_45', th: 'แพนกล้องซ้าย 45° (Pan Left 45°)', en: 'horizontal camera pan 45 degrees left' },
+                { val: 'pan_left_90', th: 'แพนกล้องซ้าย 90° (Pan Left 90°)', en: 'wide horizontal camera pan 90 degrees left' },
+                { val: 'pan_right_15', th: 'แพนกล้องขวา 15° (Pan Right 15°)', en: 'subtle horizontal camera pan 15 degrees right' },
+                { val: 'pan_right_30', th: 'แพนกล้องขวา 30° (Pan Right 30°)', en: 'horizontal camera pan 30 degrees right' },
+                { val: 'pan_right_45', th: 'แพนกล้องขวา 45° (Pan Right 45°)', en: 'horizontal camera pan 45 degrees right' },
+                { val: 'pan_right_90', th: 'แพนกล้องขวา 90° (Pan Right 90°)', en: 'wide horizontal camera pan 90 degrees right' },
+                { val: 'tilt_up', th: 'กระดกกล้องขึ้นบน (Tilt Up)', en: 'vertical camera tilt upward' },
+                { val: 'tilt_down', th: 'กระดกกล้องลงล่าง (Tilt Down)', en: 'vertical camera tilt downward' },
+                { val: 'orbit_90', th: 'หมุนวงโคจร 90° (Orbit Quarter 90°)', en: '90-degree quarter orbital camera arc' },
+                { val: 'orbit_180', th: 'หมุนวงโคจรครึ่งรอบ 180° (Orbit Half 180°)', en: '180-degree half orbital camera arc around subjects' },
+                { val: 'orbit_360', th: 'หมุนวงโคจรรอบตัว 360° (Orbit Full 360°)', en: '360-degree full orbital camera rotation around subjects' },
+                { val: 'tracking_side', th: 'กล้องวิ่งตามติดด้านข้าง (Side Tracking Shot)', en: 'smooth lateral tracking shot following subjects' },
+                { val: 'leading_shot', th: 'กล้องถอยนำหน้าตัวละคร (Leading Tracking Shot)', en: 'leading tracking shot moving backward ahead of walking subjects' },
+                { val: 'crane_up', th: 'เครนยกกล้องลอยขึ้นสูง (Crane Up)', en: 'sweeping crane shot rising upward' },
+                { val: 'crane_down', th: 'เครนลดกล้องต่ำลงพื้น (Crane Down)', en: 'sweeping crane shot descending downward' },
+                { val: 'handheld_shaky', th: 'กล้องถือมือสั่นไหวสมจริง (Handheld Shaky Cam)', en: 'realistic dynamic handheld camera movement' },
+                { val: 'steadicam_glide', th: 'สเตดิแคมลอยตัวนุ่มนวล (Steadicam Smooth Glide)', en: 'ultra-smooth floating Steadicam glide' }
+            ]
+        };
+
+        // Helper to flatten grouped option arrays for English lookup
+        function getAllLightingItems() {
+            return OPTIONS.lightingGroups.flatMap(g => g.items);
+        }
+        function getAllActionItems() {
+            return [
+                ...OPTIONS.groupActionGroups.flatMap(g => g.items),
+                ...OPTIONS.soloActionGroups.flatMap(g => g.items)
+            ];
+        }
+
+        // =========================================================================
+        // Application State
+        // =========================================================================
+        let scenes = [];
+        let characters = [];
+        let props = [];
+        let timelineRows = [];
+        let customWallpaperUrl = '';
+        let selectedAspectRatio = '16:9';
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const styleClass = type === 'warning'
+                ? 'bg-black/95 border-2 border-yellow-400 text-yellow-300'
+                : 'bg-black/95 border-2 border-red-500 text-white';
+            toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 transition-all duration-300 backdrop-blur-md ${styleClass}`;
+            toast.innerHTML = `<span>${type === 'warning' ? '⚠️' : '✅'}</span><span>${escapeHTML(message)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2800);
+        }
+
+        function updateAspectRatio(val) {
+            selectedAspectRatio = val;
+            const summaryEl = document.getElementById('outputAspectSummary');
+            if (summaryEl) {
+                summaryEl.textContent = `อัตราส่วน ${val} • พร้อมคัดลอกไปใช้งาน`;
+            }
+            generatePrompts();
+            showToast(`เปลี่ยนอัตราส่วนวิดีโอเป็น ${val} แล้ว`);
+        }
+
+        // Custom Wallpaper Upload Handler
+        function handleWallpaperUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                if (customWallpaperUrl) {
+                    URL.revokeObjectURL(customWallpaperUrl);
+                }
+                customWallpaperUrl = URL.createObjectURL(file);
+                document.body.style.backgroundImage = `url('${customWallpaperUrl}')`;
+                showToast('เปลี่ยนภาพพื้นหลัง (Wallpaper) เรียบร้อยแล้ว');
+            } catch (err) {
+                showToast('ไม่สามารถเปลี่ยนภาพพื้นหลังได้', 'warning');
+            }
+        }
+
+        // Ensures per-actor state maps exist for a timeline row
+        function ensureRowActorMaps(row, charIdStr) {
+            if (!row.dialoguesByActor) row.dialoguesByActor = {};
+            if (!row.voiceByActor) row.voiceByActor = {};
+            if (!row.emotionByActor) row.emotionByActor = {};
+            if (!row.expressionByActor) row.expressionByActor = {};
+            if (!row.actionByActor) row.actionByActor = {};
+            if (!row.gazeByActor) row.gazeByActor = {};
+
+            if (row.dialoguesByActor[charIdStr] === undefined) row.dialoguesByActor[charIdStr] = '';
+            if (!row.voiceByActor[charIdStr]) row.voiceByActor[charIdStr] = OPTIONS.voices[0].th;
+            if (!row.emotionByActor[charIdStr]) row.emotionByActor[charIdStr] = OPTIONS.emotions[0].th;
+            if (!row.expressionByActor[charIdStr]) row.expressionByActor[charIdStr] = OPTIONS.expressions[0].th;
+            if (!row.actionByActor[charIdStr]) row.actionByActor[charIdStr] = OPTIONS.soloActionGroups[1].items[0].th;
+            if (!row.gazeByActor[charIdStr]) row.gazeByActor[charIdStr] = 'camera';
+        }
+
+        function initApp() {
+            selectedAspectRatio = '16:9';
+            const arSelect = document.getElementById('aspectRatioSelect');
+            if (arSelect) arSelect.value = '16:9';
+
+            scenes = [
+                {
+                    id: 1,
+                    name: 'ฉากที่ 1: สตูดิโอแสงธรรมชาติ',
+                    imageUrl: '',
+                    fileName: '',
+                    lighting: OPTIONS.lightingGroups[0].items[0].th,
+                    cameraAngle: OPTIONS.defaultCameraAngles[1].th
+                }
+            ];
+
+            characters = [
+                {
+                    id: 1,
+                    name: 'ตัวละครที่ 1',
+                    age: '24',
+                    faceImageUrl: '',
+                    faceFileName: '',
+                    clothesImageUrl: '',
+                    clothesFileName: '',
+                    notes: ''
+                },
+                {
+                    id: 2,
+                    name: 'ตัวละครที่ 2',
+                    age: '26',
+                    faceImageUrl: '',
+                    faceFileName: '',
+                    clothesImageUrl: '',
+                    clothesFileName: '',
+                    notes: ''
+                }
+            ];
+
+            props = [
+                {
+                    id: 1,
+                    name: 'วัตถุที่ 1: แก้วกาแฟเซรามิก',
+                    imageUrl: '',
+                    fileName: '',
+                    placementPreset: 'foreground_table',
+                    placementCommand: ''
+                }
+            ];
+
+            timelineRows = [
+                {
+                    id: 101,
+                    duration: 2.0,
+                    sceneId: 1,
+                    transition: OPTIONS.transitions[1].th,
+                    actors: ['1'],
+                    dialogueMode: 'sequential', // 'sequential' or 'simultaneous'
+                    speechTiming: 'during',
+                    dialoguesByActor: { '1': '' },
+                    voiceByActor: { '1': OPTIONS.voices[0].th },
+                    emotionByActor: { '1': OPTIONS.emotions[0].th },
+                    expressionByActor: { '1': OPTIONS.expressions[0].th },
+                    actionByActor: { '1': OPTIONS.soloActionGroups[1].items[0].th },
+                    gazeByActor: { '1': 'camera' },
+                    customAction: '',
+                    targetChar: 'none',
+                    cameraFocus: 'selected_faces',
+                    cameraZoom: 'smooth_zoom_in',
+                    cameraMove: 'none'
+                }
+            ];
+
+            renderScenes();
+            renderCharacters();
+            renderProps();
+            renderTimeline();
+            generatePrompts();
+        }
+
+        // =========================================================================
+        // 1. Scene Library Functions (Max 10 Scenes)
+        // =========================================================================
+        function addScene() {
+            if (scenes.length >= MAX_SCENES) {
+                showToast('เพิ่มฉากหลังได้สูงสุด 10 ฉากเท่านั้น', 'warning');
+                return;
+            }
+            const nextId = scenes.length > 0 ? Math.max(...scenes.map(s => s.id)) + 1 : 1;
+            scenes.push({
+                id: nextId,
+                name: `ฉากที่ ${scenes.length + 1}`,
+                imageUrl: '',
+                fileName: '',
+                lighting: OPTIONS.lightingGroups[0].items[0].th,
+                cameraAngle: OPTIONS.defaultCameraAngles[1].th
+            });
+            renderScenes();
+            renderTimeline();
+            generatePrompts();
+            showToast(`เพิ่มฉากที่ ${scenes.length} เรียบร้อยแล้ว`);
+        }
+
+        function removeScene(id) {
+            if (scenes.length <= 1) {
+                showToast('ต้องมีฉากหลังอย่างน้อย 1 ฉาก', 'warning');
+                return;
+            }
+            const target = scenes.find(s => s.id === id);
+            if (target && target.imageUrl) {
+                URL.revokeObjectURL(target.imageUrl);
+            }
+            scenes = scenes.filter(s => s.id !== id);
+            const fallbackSceneId = scenes[0].id;
+            timelineRows.forEach(row => {
+                if (row.sceneId === id) row.sceneId = fallbackSceneId;
+            });
+            renderScenes();
+            renderTimeline();
+            generatePrompts();
+            showToast('ลบฉากหลังแล้ว', 'warning');
+        }
+
+        function updateSceneData(id, field, value) {
+            const scene = scenes.find(s => s.id === id);
+            if (!scene) return;
+            scene[field] = value;
+            if (field === 'name') {
+                renderTimeline();
+            }
+            generatePrompts();
+        }
+
+        function handleSceneImageUpload(id, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const scene = scenes.find(s => s.id === id);
+            if (!scene) return;
+            if (scene.imageUrl) URL.revokeObjectURL(scene.imageUrl);
+            scene.imageUrl = URL.createObjectURL(file);
+            scene.fileName = file.name;
+            renderScenes();
+            generatePrompts();
+            showToast(`อัปโหลดรูปภาพฉาก "${scene.name}" แล้ว`);
+        }
+
+        function clearSceneImage(id) {
+            const scene = scenes.find(s => s.id === id);
+            if (!scene) return;
+            if (scene.imageUrl) URL.revokeObjectURL(scene.imageUrl);
+            scene.imageUrl = '';
+            scene.fileName = '';
+            renderScenes();
+            generatePrompts();
+            showToast('ลบรูปฉากแล้ว', 'warning');
+        }
+
+        function renderScenes() {
+            const badge = document.getElementById('sceneCountBadge');
+            const addBtn = document.getElementById('addSceneBtn');
+            const container = document.getElementById('sceneContainer');
+
+            badge.textContent = `${scenes.length}/${MAX_SCENES}`;
+            if (scenes.length >= MAX_SCENES) {
+                addBtn.disabled = true;
+                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                addBtn.disabled = false;
+                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            container.innerHTML = scenes.map((s, idx) => `
+                <div class="amoled-subcard rounded-xl p-3 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                    <div class="relative w-full sm:w-20 h-20 rounded-xl bg-black/85 border-2 border-dashed border-red-500 hover:border-white overflow-hidden shrink-0 flex items-center justify-center cursor-pointer">
+                        ${s.imageUrl ? `
+                            <img src="${s.imageUrl}" alt="Scene Preview" class="w-full h-full object-cover">
+                            <button type="button" onclick="clearSceneImage(${s.id})" class="absolute top-1 right-1 bg-red-600 border border-white text-white text-[9px] px-1.5 py-0.5 rounded font-bold z-10">ลบ</button>
+                        ` : `
+                            <div class="text-center p-1.5 pointer-events-none">
+                                <div class="text-red-400 text-[11px] font-bold">+ รูปฉาก</div>
+                                <div class="text-[9px] text-white/75 mt-0.5">ฉาก #${idx + 1}</div>
+                            </div>
+                        `}
+                        <input type="file" accept="image/*" onchange="handleSceneImageUpload(${s.id}, event)" class="absolute inset-0 opacity-0 cursor-pointer" title="อัปโหลดภาพฉากหลัง">
+                    </div>
+
+                    <div class="flex-1 w-full space-y-2 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-bold text-red-400">ฉากลำดับที่ #${idx + 1}</span>
+                            ${scenes.length > 1 ? `
+                                <button type="button" onclick="removeScene(${s.id})" class="text-[11px] text-red-400 hover:text-white font-bold underline">ลบฉากนี้</button>
+                            ` : ''}
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input type="text" value="${escapeHTML(s.name)}" oninput="updateSceneData(${s.id}, 'name', this.value)" placeholder="ชื่อฉาก..." class="amoled-input rounded-lg px-2.5 py-1.5 text-xs">
+                            <select onchange="updateSceneData(${s.id}, 'lighting', this.value)" class="amoled-input rounded-lg px-2.5 py-1.5 text-xs" title="เลือกสภาพแสงสีในฉาก">
+                                ${OPTIONS.lightingGroups.map(grp => `
+                                    <optgroup label="${escapeHTML(grp.group)}">
+                                        ${grp.items.map(l => `<option value="${escapeHTML(l.th)}" ${s.lighting === l.th ? 'selected' : ''}>${escapeHTML(l.th)}</option>`).join('')}
+                                    </optgroup>
+                                `).join('')}
+                            </select>
+                            <select onchange="updateSceneData(${s.id}, 'cameraAngle', this.value)" class="amoled-input rounded-lg px-2.5 py-1.5 text-xs" title="เลือกมุมกล้องเริ่มต้นของฉาก">
+                                ${OPTIONS.defaultCameraAngles.map(a => `<option value="${escapeHTML(a.th)}" ${s.cameraAngle === a.th ? 'selected' : ''}>${escapeHTML(a.th)}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // =========================================================================
+        // 2. Character Roster Functions (Max 5 Characters, Stacked Age for Mobile)
+        // =========================================================================
+        function addCharacter() {
+            if (characters.length >= MAX_CHARACTERS) {
+                showToast('เพิ่มตัวละครได้สูงสุด 5 ตัวเท่านั้น', 'warning');
+                return;
+            }
+            const nextId = characters.length > 0 ? Math.max(...characters.map(c => c.id)) + 1 : 1;
+            characters.push({
+                id: nextId,
+                name: `ตัวละครที่ ${characters.length + 1}`,
+                age: '25',
+                faceImageUrl: '',
+                faceFileName: '',
+                clothesImageUrl: '',
+                clothesFileName: '',
+                notes: ''
+            });
+            renderCharacters();
+            renderTimeline();
+            generatePrompts();
+            showToast(`เพิ่มตัวละครที่ ${characters.length} เรียบร้อยแล้ว`);
+        }
+
+        function removeCharacter(id) {
+            if (characters.length <= 1) {
+                showToast('ต้องมีตัวละครอย่างน้อย 1 ตัว', 'warning');
+                return;
+            }
+            const target = characters.find(c => c.id === id);
+            if (target) {
+                if (target.faceImageUrl) URL.revokeObjectURL(target.faceImageUrl);
+                if (target.clothesImageUrl) URL.revokeObjectURL(target.clothesImageUrl);
+            }
+            characters = characters.filter(c => c.id !== id);
+            const fallbackId = String(characters[0].id);
+            const removedIdStr = String(id);
+
+            timelineRows.forEach(row => {
+                row.actors = row.actors.filter(aId => aId !== removedIdStr);
+                if (row.dialoguesByActor) delete row.dialoguesByActor[removedIdStr];
+                if (row.voiceByActor) delete row.voiceByActor[removedIdStr];
+                if (row.emotionByActor) delete row.emotionByActor[removedIdStr];
+                if (row.expressionByActor) delete row.expressionByActor[removedIdStr];
+                if (row.actionByActor) delete row.actionByActor[removedIdStr];
+                if (row.gazeByActor) {
+                    delete row.gazeByActor[removedIdStr];
+                    Object.keys(row.gazeByActor).forEach(k => {
+                        if (row.gazeByActor[k] === `char:${id}`) row.gazeByActor[k] = 'camera';
+                    });
+                }
+
+                if (row.actors.length === 0) {
+                    row.actors = [fallbackId];
+                    ensureRowActorMaps(row, fallbackId);
+                }
+                if (row.targetChar === `char:${id}`) row.targetChar = 'none';
+                if (row.cameraFocus === `face:${id}`) row.cameraFocus = 'none';
+            });
+
+            renderCharacters();
+            renderTimeline();
+            generatePrompts();
+            showToast('ลบตัวละครแล้ว', 'warning');
+        }
+
+        function updateCharData(id, field, value) {
+            const char = characters.find(c => c.id === id);
+            if (!char) return;
+            char[field] = value;
+            if (field === 'name') {
+                renderTimeline();
+            }
+            generatePrompts();
+        }
+
+        function handleCharImageUpload(id, type, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const char = characters.find(c => c.id === id);
+            if (!char) return;
+
+            if (type === 'face') {
+                if (char.faceImageUrl) URL.revokeObjectURL(char.faceImageUrl);
+                char.faceImageUrl = URL.createObjectURL(file);
+                char.faceFileName = file.name;
+                showToast(`อัปโหลดใบหน้า/รูปร่างของ ${char.name} (ไม่เอาชุดเดิม) แล้ว`);
+            } else {
+                if (char.clothesImageUrl) URL.revokeObjectURL(char.clothesImageUrl);
+                char.clothesImageUrl = URL.createObjectURL(file);
+                char.clothesFileName = file.name;
+                showToast(`อัปโหลดเสื้อผ้า/เครื่องประดับของ ${char.name} แล้ว`);
+            }
+            renderCharacters();
+            renderTimeline();
+            generatePrompts();
+        }
+
+        function clearCharImage(id, type) {
+            const char = characters.find(c => c.id === id);
+            if (!char) return;
+            if (type === 'face') {
+                if (char.faceImageUrl) URL.revokeObjectURL(char.faceImageUrl);
+                char.faceImageUrl = '';
+                char.faceFileName = '';
+            } else {
+                if (char.clothesImageUrl) URL.revokeObjectURL(char.clothesImageUrl);
+                char.clothesImageUrl = '';
+                char.clothesFileName = '';
+            }
+            renderCharacters();
+            renderTimeline();
+            generatePrompts();
+            showToast('ลบรูปภาพตัวละครแล้ว', 'warning');
+        }
+
+        function renderCharacters() {
+            const badge = document.getElementById('charCountBadge');
+            const addBtn = document.getElementById('addCharBtn');
+            const container = document.getElementById('characterContainer');
+
+            badge.textContent = `${characters.length}/${MAX_CHARACTERS}`;
+            if (characters.length >= MAX_CHARACTERS) {
+                addBtn.disabled = true;
+                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                addBtn.disabled = false;
+                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            container.innerHTML = characters.map((c, idx) => `
+                <div class="amoled-subcard rounded-xl p-3.5 space-y-3">
+                    <!-- Top Header -->
+                    <div class="flex items-center justify-between gap-2 border-b border-red-500/50 pb-2">
+                        <span class="px-2.5 py-0.5 rounded bg-red-600 text-white border border-white text-xs font-bold">ตัวละครที่ #${idx + 1}</span>
+                        ${characters.length > 1 ? `
+                            <button type="button" onclick="removeCharacter(${c.id})" class="text-[11px] text-red-400 hover:text-white font-bold underline">ลบตัวละคร</button>
+                        ` : ''}
+                    </div>
+
+                    <!-- Clean Grid for Name and Age -->
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                        <div class="sm:col-span-8">
+                            <label class="block text-[11px] font-bold text-red-400 mb-1">ชื่อตัวละคร (Character Name)</label>
+                            <input type="text" value="${escapeHTML(c.name)}" oninput="updateCharData(${c.id}, 'name', this.value)" placeholder="ตั้งชื่อตัวละคร..." class="amoled-input w-full rounded-lg px-3 py-1.5 text-xs font-semibold">
+                        </div>
+                        <div class="sm:col-span-4">
+                            <label class="block text-[11px] font-bold text-red-400 mb-1">อายุ (Age)</label>
+                            <div class="flex items-center gap-1.5">
+                                <input type="number" min="1" max="120" value="${escapeHTML(c.age)}" oninput="updateCharData(${c.id}, 'age', this.value)" placeholder="25" class="amoled-input w-20 rounded-lg px-2 py-1.5 text-xs font-bold text-center">
+                                <span class="text-xs font-semibold text-white">ปี</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dual Image Upload Slots -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <!-- Slot 1: Face / Body (Excludes original clothes) -->
+                        <div class="bg-black/85 border border-red-500/80 rounded-xl p-2.5 flex items-center gap-2.5">
+                            <div class="relative w-14 h-14 rounded-lg bg-black border-2 border-dashed border-red-500 hover:border-white overflow-hidden shrink-0 flex items-center justify-center cursor-pointer">
+                                ${c.faceImageUrl ? `
+                                    <img src="${c.faceImageUrl}" alt="Face Preview" class="w-full h-full object-cover">
+                                    <button type="button" onclick="clearCharImage(${c.id}, 'face')" class="absolute top-0.5 right-0.5 bg-red-600 border border-white text-white text-[8px] px-1 rounded font-bold z-10">ลบ</button>
+                                ` : `
+                                    <span class="text-[9px] text-red-400 font-bold text-center px-1 pointer-events-none">+ ใบหน้า/ตัว</span>
+                                `}
+                                <input type="file" accept="image/*" onchange="handleCharImageUpload(${c.id}, 'face', event)" class="absolute inset-0 opacity-0 cursor-pointer" title="อัปโหลดใบหน้า รูปร่าง ทรงผม สีผิว">
+                            </div>
+                            <div class="text-[11px] space-y-0.5 min-w-0">
+                                <div class="font-bold text-white truncate">1. ใบหน้า / รูปร่าง / ทรงผม</div>
+                                <p class="text-[10px] text-white/80 leading-snug">ดึงโครงหน้า ทรงผม สีผิว <span class="text-red-400 font-bold">(ยกเว้นชุดเดิม)</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Slot 2: Outfits & All Accessories -->
+                        <div class="bg-black/85 border border-red-500/80 rounded-xl p-2.5 flex items-center gap-2.5">
+                            <div class="relative w-14 h-14 rounded-lg bg-black border-2 border-dashed border-red-500 hover:border-white overflow-hidden shrink-0 flex items-center justify-center cursor-pointer">
+                                ${c.clothesImageUrl ? `
+                                    <img src="${c.clothesImageUrl}" alt="Clothes Preview" class="w-full h-full object-cover">
+                                    <button type="button" onclick="clearCharImage(${c.id}, 'clothes')" class="absolute top-0.5 right-0.5 bg-red-600 border border-white text-white text-[8px] px-1 rounded font-bold z-10">ลบ</button>
+                                ` : `
+                                    <span class="text-[9px] text-red-400 font-bold text-center px-1 pointer-events-none">+ ชุด/อุปกรณ์</span>
+                                `}
+                                <input type="file" accept="image/*" onchange="handleCharImageUpload(${c.id}, 'clothes', event)" class="absolute inset-0 opacity-0 cursor-pointer" title="อัปโหลดเสื้อผ้าและเครื่องประดับทั้งหมด">
+                            </div>
+                            <div class="text-[11px] space-y-0.5 min-w-0">
+                                <div class="font-bold text-white truncate">2. เสื้อผ้า & เครื่องประดับ</div>
+                                <p class="text-[10px] text-white/80 leading-snug">ชุด หมวก แว่น นาฬิกา กระเป๋า รองเท้า</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <input type="text" value="${escapeHTML(c.notes)}" oninput="updateCharData(${c.id}, 'notes', this.value)" placeholder="รายละเอียดเสริม (เช่น หมวก ที่คาดผม แว่นตา นาฬิกา กระเป๋า รองเท้า)..." class="amoled-input w-full rounded-lg px-2.5 py-1.5 text-xs">
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // =========================================================================
+        // 3. Props & Objects Library Functions (Max 10 Objects)
+        // =========================================================================
+        function addProp() {
+            if (props.length >= MAX_PROPS) {
+                showToast('เพิ่มวัตถุสิ่งของได้สูงสุด 10 ชิ้นเท่านั้น', 'warning');
+                return;
+            }
+            const nextId = props.length > 0 ? Math.max(...props.map(p => p.id)) + 1 : 1;
+            props.push({
+                id: nextId,
+                name: `วัตถุที่ ${props.length + 1}`,
+                imageUrl: '',
+                fileName: '',
+                placementPreset: 'foreground_table',
+                placementCommand: ''
+            });
+            renderProps();
+            generatePrompts();
+            showToast(`เพิ่มวัตถุสิ่งของชิ้นที่ ${props.length} เรียบร้อยแล้ว`);
+        }
+
+        function removeProp(id) {
+            const target = props.find(p => p.id === id);
+            if (target && target.imageUrl) {
+                URL.revokeObjectURL(target.imageUrl);
+            }
+            props = props.filter(p => p.id !== id);
+            renderProps();
+            generatePrompts();
+            showToast('ลบวัตถุสิ่งของแล้ว', 'warning');
+        }
+
+        function updatePropData(id, field, value) {
+            const prop = props.find(p => p.id === id);
+            if (!prop) return;
+            prop[field] = value;
+            generatePrompts();
+        }
+
+        function handlePropImageUpload(id, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const prop = props.find(p => p.id === id);
+            if (!prop) return;
+            if (prop.imageUrl) URL.revokeObjectURL(prop.imageUrl);
+            prop.imageUrl = URL.createObjectURL(file);
+            prop.fileName = file.name;
+            renderProps();
+            generatePrompts();
+            showToast(`อัปโหลดรูปภาพวัตถุ "${prop.name}" แล้ว`);
+        }
+
+        function clearPropImage(id) {
+            const prop = props.find(p => p.id === id);
+            if (!prop) return;
+            if (prop.imageUrl) URL.revokeObjectURL(prop.imageUrl);
+            prop.imageUrl = '';
+            prop.fileName = '';
+            renderProps();
+            generatePrompts();
+            showToast('ลบรูปวัตถุสิ่งของแล้ว', 'warning');
+        }
+
+        function renderProps() {
+            const badge = document.getElementById('propCountBadge');
+            const addBtn = document.getElementById('addPropBtn');
+            const container = document.getElementById('propContainer');
+
+            badge.textContent = `${props.length}/${MAX_PROPS}`;
+            if (props.length >= MAX_PROPS) {
+                addBtn.disabled = true;
+                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                addBtn.disabled = false;
+                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            if (props.length === 0) {
+                container.innerHTML = `
+                    <div class="amoled-subcard rounded-xl p-4 text-center space-y-2">
+                        <p class="text-xs text-white/80">ยังไม่มีวัตถุสิ่งของเพิ่มเติมในฉาก</p>
+                        <button type="button" onclick="addProp()" class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-white hover:text-black border border-white text-white text-xs font-bold transition-colors">
+                            + เพิ่มวัตถุสิ่งของชิ้นแรก
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = props.map((p, idx) => `
+                <div class="amoled-subcard rounded-xl p-3 flex flex-col sm:flex-row gap-3 items-start">
+                    <!-- Prop Image Upload Box -->
+                    <div class="relative w-full sm:w-20 h-20 rounded-xl bg-black/85 border-2 border-dashed border-red-500 hover:border-white overflow-hidden shrink-0 flex items-center justify-center cursor-pointer">
+                        ${p.imageUrl ? `
+                            <img src="${p.imageUrl}" alt="Prop Preview" class="w-full h-full object-cover">
+                            <button type="button" onclick="clearPropImage(${p.id})" class="absolute top-1 right-1 bg-red-600 border border-white text-white text-[9px] px-1.5 py-0.5 rounded font-bold z-10">ลบ</button>
+                        ` : `
+                            <div class="text-center p-1.5 pointer-events-none">
+                                <div class="text-red-400 text-[11px] font-bold">+ รูปวัตถุ</div>
+                                <div class="text-[9px] text-white/75 mt-0.5">ชิ้นที่ #${idx + 1}</div>
+                            </div>
+                        `}
+                        <input type="file" accept="image/*" onchange="handlePropImageUpload(${p.id}, event)" class="absolute inset-0 opacity-0 cursor-pointer" title="อัปโหลดภาพวัตถุสิ่งของ">
+                    </div>
+
+                    <!-- Prop Details & Scene Placement Controls -->
+                    <div class="flex-1 w-full space-y-2 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="px-2 py-0.5 rounded bg-red-600/30 border border-red-500 text-[10px] font-bold text-red-300">📦 วัตถุสิ่งของลำดับที่ #${idx + 1}</span>
+                            <button type="button" onclick="removeProp(${p.id})" class="text-[11px] text-red-400 hover:text-white font-bold underline">ลบวัตถุนี้</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-white/80 mb-0.5">ชื่อวัตถุสิ่งของ (Object Name)</label>
+                                <input type="text" value="${escapeHTML(p.name)}" oninput="updatePropData(${p.id}, 'name', this.value)" placeholder="เช่น แก้วกาแฟ, สมาร์ทโฟน, หนังสือเก่า..." class="amoled-input w-full rounded-lg px-2.5 py-1.5 text-xs font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-red-400 font-bold mb-0.5">ตำแหน่งวางหลักในฉาก (Quick Placement)</label>
+                                <select onchange="updatePropData(${p.id}, 'placementPreset', this.value)" class="amoled-input w-full rounded-lg px-2.5 py-1.5 text-xs">
+                                    ${PROP_PLACEMENTS.map(pl => `<option value="${pl.val}" ${p.placementPreset === pl.val ? 'selected' : ''}>${escapeHTML(pl.th)}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] text-red-400 font-bold mb-0.5">คำสั่งระบุจุดวางวัตถุในฉากโดยละเอียด (Scene Placement Instruction)</label>
+                            <input type="text" value="${escapeHTML(p.placementCommand)}" oninput="updatePropData(${p.id}, 'placementCommand', this.value)" placeholder="พิมพ์คำสั่งกำหนดจุดวาง เช่น วางไว้บนโต๊ะไม้ด้านหน้าทางขวาใกล้แก้วน้ำ มีไอร้อนลอยขึ้น..." class="amoled-input w-full rounded-lg px-2.5 py-1.5 text-xs">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // =========================================================================
+        // 4. Sequential Action Timeline Functions (Up to 10 Rows, Per-Actor Independent Controls & Unison Speech)
+        // =========================================================================
+        function addTimelineRow() {
+            if (timelineRows.length >= MAX_TIMELINE_ROWS) {
+                showToast('เพิ่มลำดับเหตุการณ์ได้สูงสุด 10 บรรทัดเท่านั้น', 'warning');
+                return;
+            }
+            const nextId = timelineRows.length > 0 ? Math.max(...timelineRows.map(r => r.id)) + 1 : 101;
+            const defaultActorId = characters.length > 0 ? String(characters[0].id) : '';
+            const defaultScene = scenes.length > 0 ? scenes[0].id : 1;
+
+            const newRow = {
+                id: nextId,
+                duration: 1.5,
+                sceneId: defaultScene,
+                transition: OPTIONS.transitions[0].th,
+                actors: defaultActorId ? [defaultActorId] : [],
+                dialogueMode: 'sequential',
+                speechTiming: 'during',
+                dialoguesByActor: {},
+                voiceByActor: {},
+                emotionByActor: {},
+                expressionByActor: {},
+                actionByActor: {},
+                gazeByActor: {},
+                customAction: '',
+                targetChar: 'none',
+                cameraFocus: 'selected_faces',
+                cameraZoom: 'none',
+                cameraMove: 'none'
+            };
+
+            if (defaultActorId) {
+                ensureRowActorMaps(newRow, defaultActorId);
+            }
+
+            timelineRows.push(newRow);
+            renderTimeline();
+            generatePrompts();
+            showToast(`เพิ่มบรรทัดเหตุการณ์ลำดับที่ ${timelineRows.length}/${MAX_TIMELINE_ROWS} แล้ว`);
+        }
+
+        function removeTimelineRow(id) {
+            if (timelineRows.length <= 1) {
+                showToast('ต้องมีบรรทัดเหตุการณ์อย่างน้อย 1 บรรทัด', 'warning');
+                return;
+            }
+            timelineRows = timelineRows.filter(r => r.id !== id);
+            renderTimeline();
+            generatePrompts();
+            showToast('ลบบรรทัดเหตุการณ์แล้ว', 'warning');
+        }
+
+        function moveTimelineRow(index, direction) {
+            const targetIdx = index + direction;
+            if (targetIdx < 0 || targetIdx >= timelineRows.length) return;
+            const temp = timelineRows[index];
+            timelineRows[index] = timelineRows[targetIdx];
+            timelineRows[targetIdx] = temp;
+            renderTimeline();
+            generatePrompts();
+        }
+
+        function stepRowDuration(id, delta) {
+            const row = timelineRows.find(r => r.id === id);
+            if (!row) return;
+            const currentVal = parseFloat(row.duration) || 0.1;
+            let nextVal = Math.round((currentVal + delta) * 10) / 10;
+            if (nextVal < 0.1) nextVal = 0.1;
+            if (nextVal > 15.0) nextVal = 15.0;
+            row.duration = nextVal;
+
+            const inputEl = document.getElementById(`durationInput_${id}`);
+            if (inputEl) {
+                inputEl.value = nextVal.toFixed(1);
+            }
+
+            updateTimeLabelsOnly();
+            generatePrompts();
+        }
+
+        function handleDurationInput(id, rawValue) {
+            const row = timelineRows.find(r => r.id === id);
+            if (!row) return;
+            const parsed = parseFloat(rawValue);
+            if (!isNaN(parsed) && parsed >= 0.1) {
+                row.duration = Math.round(parsed * 10) / 10;
+            } else if (rawValue === '') {
+                row.duration = 0.1;
+            }
+            updateTimeLabelsOnly();
+            generatePrompts();
+        }
+
+        function normalizeDurationInput(id) {
+            const row = timelineRows.find(r => r.id === id);
+            if (!row) return;
+            let val = parseFloat(row.duration);
+            if (isNaN(val) || val < 0.1) val = 0.1;
+            if (val > 15.0) val = 15.0;
+            row.duration = Math.round(val * 10) / 10;
+
+            const inputEl = document.getElementById(`durationInput_${id}`);
+            if (inputEl) {
+                inputEl.value = row.duration.toFixed(1);
+            }
+            updateTimeLabelsOnly();
+            generatePrompts();
+        }
+
+        function updateTimelineRow(id, field, value) {
+            const row = timelineRows.find(r => r.id === id);
+            if (!row) return;
+            row[field] = value;
+            if (field === 'duration') {
+                updateTimeLabelsOnly();
+            }
+            if (field === 'speechTiming' || field === 'dialogueMode') {
+                renderTimeline();
+                if (field === 'dialogueMode') {
+                    showToast(value === 'simultaneous'
+                        ? 'เปลี่ยนเป็นโหมด "พูดพร้อมกัน" แล้ว'
+                        : 'เปลี่ยนเป็นโหมด "พูดเรียงตามลำดับ" แล้ว');
+                }
+            }
+            generatePrompts();
+        }
+
+        // Unified per-actor field updater (dialogue, voice, emotion, expression, action, gaze)
+        function updateActorField(rowId, charIdStr, mapName, value) {
+            const row = timelineRows.find(r => r.id === rowId);
+            if (!row) return;
+            ensureRowActorMaps(row, charIdStr);
+            row[mapName][charIdStr] = value;
+            generatePrompts();
+        }
+
+        // Toggle individual character participation in a timeline row
+        function toggleActorInRow(rowId, charIdStr) {
+            const row = timelineRows.find(r => r.id === rowId);
+            if (!row) return;
+
+            const exists = row.actors.includes(charIdStr);
+            if (exists) {
+                if (row.actors.length <= 1) {
+                    showToast('ต้องเลือกตัวละครที่มีบทบาทอย่างน้อย 1 ตัวในแต่ละบรรทัด', 'warning');
+                    return;
+                }
+                row.actors = row.actors.filter(a => a !== charIdStr);
+            } else {
+                row.actors.push(charIdStr);
+                ensureRowActorMaps(row, charIdStr);
+            }
+            renderTimeline();
+            generatePrompts();
+        }
+
+        // Select ONLY one specific character (Solo mode)
+        function selectSoloActorInRow(rowId, charIdStr) {
+            const row = timelineRows.find(r => r.id === rowId);
+            if (!row) return;
+
+            const targetChar = characters.find(c => String(c.id) === charIdStr);
+            row.actors = [charIdStr];
+            ensureRowActorMaps(row, charIdStr);
+
+            renderTimeline();
+            generatePrompts();
+            if (targetChar) {
+                showToast(`กำหนดให้ "${targetChar.name}" แสดงเดี่ยวในฉากนี้`);
+            }
+        }
+
+        // Select ALL characters in roster order
+        function selectAllActorsInRow(rowId) {
+            const row = timelineRows.find(r => r.id === rowId);
+            if (!row) return;
+
+            characters.forEach(c => {
+                const cId = String(c.id);
+                if (!row.actors.includes(cId)) {
+                    row.actors.push(cId);
+                }
+                ensureRowActorMaps(row, cId);
+            });
+
+            renderTimeline();
+            generatePrompts();
+            showToast(`เลือกตัวละครทั้งหมด (${row.actors.length} ตัว) เรียบร้อยแล้ว`);
+        }
+
+        function updateTimeLabelsOnly() {
+            let cumulative = 0;
+            timelineRows.forEach((row) => {
+                const dur = Math.max(0.1, parseFloat(row.duration) || 0.1);
+                const start = cumulative;
+                cumulative = Math.round((cumulative + dur) * 10) / 10;
+                const end = cumulative;
+
+                const timeEl = document.getElementById(`rowTimeLabel_${row.id}`);
+                const cardEl = document.getElementById(`timelineCard_${row.id}`);
+                const warnEl = document.getElementById(`rowOverflowBadge_${row.id}`);
+
+                if (timeEl) timeEl.textContent = `${start.toFixed(1)}s - ${end.toFixed(1)}s`;
+                if (cardEl && warnEl) {
+                    if (end > MAX_DURATION) {
+                        cardEl.classList.add('ring-2', 'ring-yellow-400');
+                        warnEl.classList.remove('hidden');
+                    } else {
+                        cardEl.classList.remove('ring-2', 'ring-yellow-400');
+                        warnEl.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timelineContainer');
+            const badge = document.getElementById('timelineCountBadge');
+            const addBtn = document.getElementById('addTimelineBtn');
+
+            if (badge) {
+                badge.textContent = `${timelineRows.length}/${MAX_TIMELINE_ROWS}`;
+            }
+            if (addBtn) {
+                if (timelineRows.length >= MAX_TIMELINE_ROWS) {
+                    addBtn.disabled = true;
+                    addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    addBtn.disabled = false;
+                    addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+
+            let cumulative = 0;
+
+            container.innerHTML = timelineRows.map((row, idx) => {
+                const dur = Math.max(0.1, parseFloat(row.duration) || 0.1);
+                const start = cumulative;
+                cumulative = Math.round((cumulative + dur) * 10) / 10;
+                const end = cumulative;
+                const isOverflow = end > MAX_DURATION;
+                const isAllSelected = characters.length > 1 && row.actors.length === characters.length;
+                const currentTiming = row.speechTiming || 'during';
+                const currentDialogueMode = row.dialogueMode || 'sequential';
+                const isSimultaneous = currentDialogueMode === 'simultaneous';
+
+                // Ensure maps exist for all active actors
+                row.actors.forEach(aId => ensureRowActorMaps(row, aId));
+
+                // Build ordered list of active character objects matching exact tick order
+                const orderedActors = row.actors
+                    .map(idStr => characters.find(c => String(c.id) === idStr))
+                    .filter(Boolean);
+
+                return `
+                <div id="timelineCard_${row.id}" class="amoled-subcard ${isOverflow ? 'ring-2 ring-yellow-400' : ''} rounded-2xl p-3.5 sm:p-4 space-y-3.5 transition-all">
+                    <!-- Row Header -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/60 pb-2.5">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-1 rounded-lg bg-red-600 border border-white text-white text-xs font-bold">
+                                ลำดับที่ ${idx + 1}
+                            </span>
+                            <span id="rowTimeLabel_${row.id}" class="px-2.5 py-1 rounded-lg bg-black/90 border border-red-500 text-white text-xs font-bold">
+                                ${start.toFixed(1)}s - ${end.toFixed(1)}s
+                            </span>
+                            <span id="rowOverflowBadge_${row.id}" class="${isOverflow ? '' : 'hidden'} px-2 py-0.5 rounded bg-yellow-400 text-black text-[11px] font-extrabold">
+                                ⚠️ เกิน 15.0 วิ
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <!-- Custom Decimal Stepper (▲ / ▼ 0.1s) -->
+                            <div class="flex items-center bg-black/90 border border-red-500 rounded-lg overflow-hidden">
+                                <span class="text-[11px] text-white/90 pl-2 pr-1">เวลา:</span>
+                                <input
+                                    id="durationInput_${row.id}"
+                                    type="number"
+                                    inputmode="decimal"
+                                    step="0.1"
+                                    min="0.1"
+                                    max="15.0"
+                                    value="${dur.toFixed(1)}"
+                                    oninput="handleDurationInput(${row.id}, this.value)"
+                                    onblur="normalizeDurationInput(${row.id})"
+                                    class="no-spinner w-11 bg-transparent text-xs text-white font-extrabold text-center focus:outline-none py-1"
+                                    title="พิมพ์ตัวเลขทศนิยมหรือกดปุ่มลูกศรขึ้น/ลงทีละ 0.1 วินาที"
+                                >
+                                <span class="text-[11px] text-white/80 pr-1.5">วิ</span>
+                                <div class="flex flex-col border-l border-red-500">
+                                    <button
+                                        type="button"
+                                        onclick="stepRowDuration(${row.id}, 0.1)"
+                                        class="px-2 py-0.5 bg-black hover:bg-red-600 active:bg-red-500 text-white text-[9px] leading-none font-bold border-b border-red-500/70 transition-colors select-none"
+                                        title="เพิ่มเวลา +0.1 วินาที"
+                                    >▲</button>
+                                    <button
+                                        type="button"
+                                        onclick="stepRowDuration(${row.id}, -0.1)"
+                                        class="px-2 py-0.5 bg-black hover:bg-red-600 active:bg-red-500 text-white text-[9px] leading-none font-bold transition-colors select-none"
+                                        title="ลดเวลา -0.1 วินาที"
+                                    >▼</button>
+                                </div>
+                            </div>
+
+                            <button type="button" onclick="moveTimelineRow(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-1.5 rounded-lg bg-black/90 hover:bg-red-600 border border-red-500 text-xs text-white disabled:opacity-30" title="เลื่อนลำดับขึ้น">↑</button>
+                            <button type="button" onclick="moveTimelineRow(${idx}, 1)" ${idx === timelineRows.length - 1 ? 'disabled' : ''} class="px-2 py-1.5 rounded-lg bg-black/90 hover:bg-red-600 border border-red-500 text-xs text-white disabled:opacity-30" title="เลื่อนลำดับลง">↓</button>
+                            ${timelineRows.length > 1 ? `
+                                <button type="button" onclick="removeTimelineRow(${row.id})" class="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-white hover:text-black border border-white text-white text-xs font-bold ml-0.5">ลบ</button>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- 1. Scene Selection & Transition Effect -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-black/65 border border-red-500/70 rounded-xl p-2.5">
+                        <div>
+                            <label class="block text-[11px] text-red-400 font-bold mb-1">ฉากหลังที่ใช้แสดง (Active Scene)</label>
+                            <select onchange="updateTimelineRow(${row.id}, 'sceneId', Number(this.value))" class="amoled-input w-full rounded-lg px-2.5 py-1.5 text-xs">
+                                ${scenes.map((s, sIdx) => `<option value="${s.id}" ${row.sceneId === s.id ? 'selected' : ''}>ฉาก #${sIdx + 1}: ${escapeHTML(s.name)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-red-400 font-bold mb-1">เอฟเฟกต์เปลี่ยนฉาก (Transition)</label>
+                            <select onchange="updateTimelineRow(${row.id}, 'transition', this.value)" class="amoled-input w-full rounded-lg px-2.5 py-1.5 text-xs">
+                                ${OPTIONS.transitions.map(t => `<option value="${escapeHTML(t.th)}" ${row.transition === t.th ? 'selected' : ''}>${escapeHTML(t.th)}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 2. Active Character Selector & Dialogue Delivery Mode (Sequential vs Simultaneous) -->
+                    <div class="bg-black/75 border border-red-500/90 rounded-xl p-3 space-y-2.5">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-xs font-bold text-red-400">🎭 เลือกตัวละครในฉากนี้:</span>
+                                <span class="px-2 py-0.5 rounded-full bg-red-600/30 border border-red-500 text-[10px] font-bold text-white">
+                                    เลือกแล้ว ${orderedActors.length}/${characters.length} ตัว
+                                </span>
+                            </div>
+                            ${characters.length > 1 ? `
+                                <button
+                                    type="button"
+                                    onclick="selectAllActorsInRow(${row.id})"
+                                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border ${isAllSelected ? 'bg-white text-black border-white' : 'bg-black hover:bg-red-600 text-white border-red-500'}"
+                                    title="เลือกตัวละครทั้งหมดให้แสดงร่วมกันในฉากนี้"
+                                >
+                                    👥 เลือกทั้งหมด (${characters.length} ตัว)
+                                </button>
+                            ` : ''}
+                        </div>
+
+                        <!-- Toggle Pills for Each Character -->
+                        <div class="flex flex-wrap gap-2">
+                            ${characters.map((c, cIdx) => {
+                                const charIdStr = String(c.id);
+                                const tickOrderIndex = row.actors.indexOf(charIdStr);
+                                const isSelected = tickOrderIndex !== -1;
+                                const avatarSrc = c.faceImageUrl || c.clothesImageUrl;
+                                const badgeLabel = isSimultaneous
+                                    ? `พูดพร้อมกัน`
+                                    : `ลำดับที่ ${tickOrderIndex + 1}`;
+                                return `
+                                <div class="inline-flex items-stretch rounded-xl overflow-hidden border transition-all ${isSelected ? 'border-white shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'border-red-500/75 opacity-85 hover:opacity-100'}">
+                                    <button
+                                        type="button"
+                                        onclick="toggleActorInRow(${row.id}, '${charIdStr}')"
+                                        class="px-2.5 py-1.5 text-xs font-bold flex items-center gap-1.5 transition-colors ${isSelected ? 'bg-red-600 text-white' : 'bg-black/90 hover:bg-red-950/70 text-white/80'}"
+                                        title="คลิกเพื่อ${isSelected ? 'ยกเลิก' : 'เลือก'}บทบาทของ ${escapeHTML(c.name)}"
+                                    >
+                                        <span class="w-4 h-4 rounded flex items-center justify-center text-[10px] font-extrabold border ${isSelected ? 'bg-white text-red-600 border-white' : 'bg-black text-transparent border-red-500'}">
+                                            ✓
+                                        </span>
+                                        ${avatarSrc ? `
+                                            <img src="${avatarSrc}" alt="${escapeHTML(c.name)}" class="w-5 h-5 rounded-full object-cover border border-white/80 shrink-0">
+                                        ` : `
+                                            <span class="w-5 h-5 rounded-full bg-black/70 border border-white/50 text-[10px] flex items-center justify-center shrink-0">#${cIdx + 1}</span>
+                                        `}
+                                        <span class="truncate max-w-[120px]">${escapeHTML(c.name)}</span>
+                                        ${isSelected ? `
+                                            <span class="px-1.5 py-0.5 rounded bg-black/90 border border-white text-[10px] font-extrabold ${isSimultaneous ? 'text-emerald-300' : 'text-yellow-300'} shrink-0">
+                                                ${badgeLabel}
+                                            </span>
+                                        ` : ''}
+                                    </button>
+                                    ${characters.length > 1 ? `
+                                        <button
+                                            type="button"
+                                            onclick="selectSoloActorInRow(${row.id}, '${charIdStr}')"
+                                            class="px-2 py-1.5 text-[10px] font-bold border-l transition-colors ${isSelected && row.actors.length === 1 ? 'bg-white text-black border-white' : 'bg-black hover:bg-red-600 text-red-300 hover:text-white border-red-500/70'}"
+                                            title="เลือกเฉพาะ ${escapeHTML(c.name)} แสดงเดี่ยว (Solo)"
+                                        >
+                                            เดี่ยว
+                                        </button>
+                                    ` : ''}
+                                </div>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        <!-- NEW v1.6: Dialogue Delivery Mode Switcher (พูดเรียงตามลำดับ vs พูดพร้อมกัน) -->
+                        <div class="pt-2 border-t border-red-500/40 space-y-1.5">
+                            <div class="flex items-center justify-between flex-wrap gap-1">
+                                <span class="text-[11px] font-bold text-red-400">🗣️ รูปแบบการพูดของตัวละครในฉากนี้:</span>
+                                <span class="text-[10px] text-white/75">${isSimultaneous ? 'ตัวละครที่เลือกพูดพร้อมกันในเวลาเดียวกัน' : 'ตัวละครพูดต่อกันทีละคนตามลำดับ'}</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                ${DIALOGUE_MODES.map(dm => {
+                                    const activeMode = currentDialogueMode === dm.val;
+                                    const isSimBtn = dm.val === 'simultaneous';
+                                    return `
+                                    <button
+                                        type="button"
+                                        onclick="updateTimelineRow(${row.id}, 'dialogueMode', '${dm.val}')"
+                                        class="px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-2 ${
+                                            activeMode
+                                                ? (isSimBtn
+                                                    ? 'bg-emerald-600 text-white border-white shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                                                    : 'bg-red-600 text-white border-white shadow-[0_0_12px_rgba(239,68,68,0.5)]')
+                                                : 'bg-black/90 hover:bg-red-950/60 text-white/80 border-red-500/70'
+                                        }"
+                                    >
+                                        <span class="w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[9px] shrink-0 ${
+                                            activeMode ? 'bg-white text-black border-white' : 'border-red-500 text-transparent'
+                                        }">●</span>
+                                        <span>${isSimBtn ? '🔊 ' : '🔢 '}${escapeHTML(dm.th)}</span>
+                                    </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Independent Per-Actor Dialogue, Emotion, Facial Expression, Action & Gaze Cards -->
+                    <div class="bg-black/80 border border-red-500/90 rounded-xl p-3 space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-xs font-bold text-red-400">
+                                💬 บทพูด & การแสดงของตัวละครแต่ละตัว (${orderedActors.length} ตัว)
+                            </span>
+                            <span class="text-[10px] text-white/85 bg-red-950/80 border border-red-500/70 px-2 py-0.5 rounded-md">
+                                พิมพ์ <strong>...</strong> = พักหายใจชั่วครู่
+                            </span>
+                        </div>
+
+                        <!-- 3-Option Speech Timing Selector Buttons -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                            ${SPEECH_TIMINGS.map(st => {
+                                const isActiveTiming = currentTiming === st.val;
+                                return `
+                                <button
+                                    type="button"
+                                    onclick="updateTimelineRow(${row.id}, 'speechTiming', '${st.val}')"
+                                    class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border text-center transition-all flex items-center justify-center gap-1.5 ${isActiveTiming ? 'bg-red-600 text-white border-white shadow-[0_0_8px_rgba(239,68,68,0.45)]' : 'bg-black/90 hover:bg-red-950/60 text-white/80 border-red-500/70'}"
+                                >
+                                    <span class="w-3 h-3 rounded-full border flex items-center justify-center text-[8px] shrink-0 ${isActiveTiming ? 'bg-white text-red-600 border-white' : 'border-red-500 text-transparent'}">●</span>
+                                    <span>${escapeHTML(st.shortTh)}</span>
+                                </button>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        <!-- Per-Actor Cards: Dialogue + Voice + Independent (Emotion, Expression, Action, Gaze) Directly Beneath -->
+                        <div class="space-y-3 pt-0.5">
+                            ${orderedActors.map((actorObj, orderIdx) => {
+                                const actorIdStr = String(actorObj.id);
+                                const actorDialogue = row.dialoguesByActor[actorIdStr] ?? '';
+                                const actorVoice = row.voiceByActor[actorIdStr] || OPTIONS.voices[0].th;
+                                const actorEmotion = row.emotionByActor[actorIdStr] || OPTIONS.emotions[0].th;
+                                const actorExpression = row.expressionByActor[actorIdStr] || OPTIONS.expressions[0].th;
+                                const actorAction = row.actionByActor[actorIdStr] || OPTIONS.soloActionGroups[1].items[0].th;
+                                const actorGaze = row.gazeByActor[actorIdStr] || 'camera';
+                                const avatarSrc = actorObj.faceImageUrl || actorObj.clothesImageUrl;
+
+                                const speakerTag = isSimultaneous
+                                    ? `พูดพร้อมกัน (${escapeHTML(actorObj.name)})`
+                                    : `บทพูดที่ ${orderIdx + 1}`;
+                                const speakerTagClass = isSimultaneous
+                                    ? 'bg-emerald-600 border-white text-white'
+                                    : 'bg-red-600 border-white text-white';
+
+                                return `
+                                <div class="amoled-actor-card rounded-xl p-3 space-y-2.5">
+                                    <!-- Actor Card Header: Speaker Badge + Name + Voice -->
+                                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/40 pb-2">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <span class="px-2 py-0.5 rounded border text-[10px] font-extrabold shrink-0 ${speakerTagClass}">
+                                                ${speakerTag}
+                                            </span>
+                                            ${avatarSrc ? `<img src="${avatarSrc}" alt="${escapeHTML(actorObj.name)}" class="w-5 h-5 rounded-full object-cover border border-white/80 shrink-0">` : ''}
+                                            <span class="text-xs font-bold text-white truncate">${escapeHTML(actorObj.name)}</span>
+                                        </div>
+
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-[10px] text-white/75">น้ำเสียง:</span>
+                                            <select onchange="updateActorField(${row.id}, '${actorIdStr}', 'voiceByActor', this.value)" class="amoled-input rounded-lg px-2 py-1 text-[11px]">
+                                                ${OPTIONS.voices.map(v => `<option value="${escapeHTML(v.th)}" ${actorVoice === v.th ? 'selected' : ''}>${escapeHTML(v.th)}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Dialogue Text Input (White Background + Blue Border) -->
+                                    <div>
+                                        <input
+                                            type="text"
+                                            value="${escapeHTML(actorDialogue)}"
+                                            oninput="updateActorField(${row.id}, '${actorIdStr}', 'dialoguesByActor', this.value)"
+                                            placeholder="${isSimultaneous
+                                                ? `พิมพ์คำพูดที่ ${escapeHTML(actorObj.name)} พูดพร้อมกับตัวละครอื่น...`
+                                                : `พิมพ์บทพูดที่ ${orderIdx + 1} ของ ${escapeHTML(actorObj.name)} (เช่น 'สวัสดี... ยินดีที่ได้รู้จักนะ')`}"
+                                            class="dialogue-white-blue-input w-full rounded-lg px-3 py-2 text-xs font-semibold shadow-sm"
+                                        >
+                                    </div>
+
+                                    <!-- MOVED v1.6: Independent Per-Actor Emotion, Facial Expression, Action & Gaze Directly Under Dialogue -->
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-red-500/30">
+                                        <div>
+                                            <label class="block text-[10px] text-red-300 font-semibold mb-0.5">😊 อารมณ์ของ ${escapeHTML(actorObj.name)}</label>
+                                            <select onchange="updateActorField(${row.id}, '${actorIdStr}', 'emotionByActor', this.value)" class="amoled-input w-full rounded-lg px-2 py-1.5 text-[11px]">
+                                                ${OPTIONS.emotions.map(em => `<option value="${escapeHTML(em.th)}" ${actorEmotion === em.th ? 'selected' : ''}>${escapeHTML(em.th)}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] text-red-300 font-semibold mb-0.5">🙂 การแสดงออกทางสีหน้า</label>
+                                            <select onchange="updateActorField(${row.id}, '${actorIdStr}', 'expressionByActor', this.value)" class="amoled-input w-full rounded-lg px-2 py-1.5 text-[11px]">
+                                                ${OPTIONS.expressions.map(ex => `<option value="${escapeHTML(ex.th)}" ${actorExpression === ex.th ? 'selected' : ''}>${escapeHTML(ex.th)}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] text-red-300 font-semibold mb-0.5">🏃 กิริยาท่าทาง & ปฏิกิริยา</label>
+                                            <select onchange="updateActorField(${row.id}, '${actorIdStr}', 'actionByActor', this.value)" class="amoled-input w-full rounded-lg px-2 py-1.5 text-[11px]">
+                                                ${OPTIONS.groupActionGroups.map(grp => `
+                                                    <optgroup label="${escapeHTML(grp.group)}">
+                                                        ${grp.items.map(ga => `<option value="${escapeHTML(ga.th)}" ${actorAction === ga.th ? 'selected' : ''}>${escapeHTML(ga.th)}</option>`).join('')}
+                                                    </optgroup>
+                                                `).join('')}
+                                                ${OPTIONS.soloActionGroups.map(grp => `
+                                                    <optgroup label="${escapeHTML(grp.group)}">
+                                                        ${grp.items.map(sa => `<option value="${escapeHTML(sa.th)}" ${actorAction === sa.th ? 'selected' : ''}>${escapeHTML(sa.th)}</option>`).join('')}
+                                                    </optgroup>
+                                                `).join('')}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] text-red-300 font-semibold mb-0.5">👁️ มุมมองสายตา (Gaze)</label>
+                                            <select onchange="updateActorField(${row.id}, '${actorIdStr}', 'gazeByActor', this.value)" class="amoled-input w-full rounded-lg px-2 py-1.5 text-[11px]">
+                                                <optgroup label="ทิศทางสายตาทั่วไป">
+                                                    ${OPTIONS.staticGazes.map(g => `<option value="${g.val}" ${actorGaze === g.val ? 'selected' : ''}>${escapeHTML(g.th)}</option>`).join('')}
+                                                </optgroup>
+                                                <optgroup label="มองเจาะจงไปที่ตัวละครอื่น">
+                                                    ${characters.filter(other => other.id !== actorObj.id).map((c) => {
+                                                        const realIdx = characters.findIndex(item => item.id === c.id) + 1;
+                                                        return `<option value="char:${c.id}" ${actorGaze === `char:${c.id}` ? 'selected' : ''}>มองไปที่ตัวละครที่ ${realIdx}: ${escapeHTML(c.name)}</option>`;
+                                                    }).join('')}
+                                                </optgroup>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <!-- 4. Scene-Wide Camera Focus, Zoom, Angle Pan/Tilt/Orbit -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-black/65 border border-red-500/70 rounded-xl p-2.5">
+                        <div>
+                            <label class="block text-[11px] text-red-400 font-bold mb-1">จุดโฟกัสกล้อง (Camera Focus)</label>
+                            <select onchange="updateTimelineRow(${row.id}, 'cameraFocus', this.value)" class="amoled-input w-full rounded-lg px-2 py-1.5 text-xs">
+                                <option value="none" ${row.cameraFocus === 'none' ? 'selected' : ''}>ไม่เจาะจง (Standard Focus)</option>
+                                <option value="selected_faces" ${row.cameraFocus === 'selected_faces' ? 'selected' : ''}>โฟกัสใบหน้าตัวละครที่เลือกในบรรทัดนี้</option>
+                                ${characters.map((c, cIdx) => `<option value="face:${c.id}" ${row.cameraFocus === `face:${c.id}` ? 'selected' : ''}>โฟกัสใบหน้าตัวละคร ${cIdx + 1}: ${escapeHTML(c.name)}</option>`).join('')}
+                                <option value="eyes_ecu" ${row.cameraFocus === 'eyes_ecu' ? 'selected' : ''}>โฟกัสเจาะลึกที่ดวงตา (Extreme Close-Up Eyes)</option>
+                                <option value="hands_action" ${row.cameraFocus === 'hands_action' ? 'selected' : ''}>โฟกัสที่มือและการกระทำ (Hands & Action)</option>
+                                <option value="full_outfit" ${row.cameraFocus === 'full_outfit' ? 'selected' : ''}>โฟกัสชุดและเครื่องแต่งกายเต็มตัว (Full Outfit)</option>
+                                <option value="rack_fg_bg" ${row.cameraFocus === 'rack_fg_bg' ? 'selected' : ''}>ดึงโฟกัสจากหน้าไปหลัง (Rack Focus FG → BG)</option>
+                                <option value="rack_bg_fg" ${row.cameraFocus === 'rack_bg_fg' ? 'selected' : ''}>ดึงโฟกัสจากหลังมาหน้า (Rack Focus BG → FG)</option>
+                                <option value="deep_focus" ${row.cameraFocus === 'deep_focus' ? 'selected' : ''}>ชัดลึกทั้งภาพ (Deep Focus All Sharp)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-red-400 font-bold mb-1">การซูม & ดอลลี่ (Zoom / Dolly)</label>
+                            <select onchange="updateTimelineRow(${row.id}, 'cameraZoom', this.value)" class="amoled-input w-full rounded-lg px-2 py-1.5 text-xs">
+                                ${OPTIONS.cameraZooms.map(z => `<option value="${z.val}" ${row.cameraZoom === z.val ? 'selected' : ''}>${escapeHTML(z.th)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-red-400 font-bold mb-1">การเคลื่อนกล้อง & องศา (Movement)</label>
+                            <select onchange="updateTimelineRow(${row.id}, 'cameraMove', this.value)" class="amoled-input w-full rounded-lg px-2 py-1.5 text-xs">
+                                ${OPTIONS.cameraMoves.map(m => `<option value="${m.val}" ${row.cameraMove === m.val ? 'selected' : ''}>${escapeHTML(m.th)}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 5. Custom Freeform Action & Target Character -->
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 bg-black/65 border border-red-500/70 rounded-xl p-2.5">
+                        <div class="sm:col-span-7">
+                            <label class="block text-[11px] text-white font-bold mb-1">การกระทำอิสระเพิ่มเติมของฉาก (Custom Freeform Action)</label>
+                            <input type="text" value="${escapeHTML(row.customAction)}" oninput="updateTimelineRow(${row.id}, 'customAction', this.value)" placeholder="เช่น ยื่นแก้วกาแฟให้, ตบไหล่เบาๆ, กระซิบข้างหู..." class="amoled-input w-full rounded-lg px-2.5 py-1.5 text-xs">
+                        </div>
+                        <div class="sm:col-span-5">
+                            <label class="block text-[11px] text-red-400 font-bold mb-1">กระทำกับเป้าหมาย / ตัวละครไหน</label>
+                            <select onchange="updateTimelineRow(${row.id}, 'targetChar', this.value)" class="amoled-input w-full rounded-lg px-2.5 py-1.5 text-xs">
+                                <option value="none" ${row.targetChar === 'none' ? 'selected' : ''}>ไม่มีเป้าหมายเฉพาะ</option>
+                                <option value="all_chars" ${row.targetChar === 'all_chars' ? 'selected' : ''}>ตัวละครทั้งหมดในฉาก</option>
+                                <option value="camera" ${row.targetChar === 'camera' ? 'selected' : ''}>กล้อง / ผู้ชมโดยตรง</option>
+                                ${characters.map((c) => `<option value="char:${c.id}" ${row.targetChar === `char:${c.id}` ? 'selected' : ''}>กระทำกับ: ${escapeHTML(c.name)}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // =========================================================================
+        // 5. Prompt Generation & 15.0s Limit Enforcement (v 1.6 Per-Actor Details + Simultaneous Speech)
+        // =========================================================================
+        function findEn(list, thVal) {
+            const found = list.find(item => item.th === thVal);
+            return found ? found.en : thVal;
+        }
+
+        function formatDialogueWithBreathingPause(rawDialogue) {
+            const trimmed = (rawDialogue || '').trim();
+            if (!trimmed) {
+                return { hasDialogue: false, hasPause: false, enText: '', thText: '' };
+            }
+            const hasPause = trimmed.includes('...');
+            const enText = hasPause
+                ? trimmed.replace(/\.{3,}/g, ' [pauses briefly to take a breath] ')
+                : trimmed;
+            const thText = hasPause
+                ? `${trimmed} (มีช่วง "..." พักหายใจชั่วครู่)`
+                : trimmed;
+            return {
+                hasDialogue: true,
+                hasPause,
+                enText: enText.replace(/\s+/g, ' ').trim(),
+                thText
+            };
+        }
+
+        function resolveGazeForActor(gazeVal) {
+            if (!gazeVal) return { en: 'making direct eye contact with the camera', th: 'มองตรงมาที่กล้อง' };
+            if (gazeVal.startsWith('char:')) {
+                const targetId = Number(gazeVal.split(':')[1]);
+                const targetChar = characters.find(c => c.id === targetId);
+                if (targetChar) {
+                    return {
+                        en: `looking directly at "${targetChar.name}"`,
+                        th: `มองไปที่ ${targetChar.name}`
+                    };
+                }
+            }
+            const gObj = OPTIONS.staticGazes.find(g => g.val === gazeVal);
+            if (gObj) {
+                return { en: gObj.en, th: gObj.th };
+            }
+            return { en: 'looking naturally', th: gazeVal };
+        }
+
+        function generatePrompts(manualTrigger = false) {
+            const totalDuration = Math.round(
+                timelineRows.reduce((sum, r) => sum + (Math.max(0.1, parseFloat(r.duration) || 0.1)), 0) * 10
+            ) / 10;
+
+            const isOverLimit = totalDuration > MAX_DURATION;
+            const pct = Math.min(100, Math.round((totalDuration / MAX_DURATION) * 100));
+
+            const totalDurationText = document.getElementById('totalDurationText');
+            const headerDurationBox = document.getElementById('headerDurationBox');
+            const headerWarningIcon = document.getElementById('headerWarningIcon');
+            const globalWarningBanner = document.getElementById('globalWarningBanner');
+            const warningBannerDetail = document.getElementById('warningBannerDetail');
+            const timelineProgressLabel = document.getElementById('timelineProgressLabel');
+            const timelineProgressBar = document.getElementById('timelineProgressBar');
+            const outputWarningCard = document.getElementById('outputWarningCard');
+            const promptOutputsWrapper = document.getElementById('promptOutputsWrapper');
+            const generatePromptBtn = document.getElementById('generatePromptBtn');
+
+            totalDurationText.textContent = `${totalDuration.toFixed(1)}s / 15.0s`;
+            timelineProgressLabel.textContent = `${totalDuration.toFixed(1)}s / 15.0s`;
+            timelineProgressBar.style.width = `${pct}%`;
+
+            if (isOverLimit) {
+                totalDurationText.className = 'text-xs sm:text-sm font-extrabold text-yellow-300 leading-none';
+                headerDurationBox.className = 'bg-black/90 border-2 border-yellow-400 px-2.5 py-1 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap';
+                headerWarningIcon.classList.remove('hidden');
+
+                globalWarningBanner.classList.remove('hidden');
+                warningBannerDetail.textContent = `ความยาวบทละครรวมปัจจุบันคือ ${totalDuration.toFixed(1)} วินาที (เกินกำหนด ${(totalDuration - MAX_DURATION).toFixed(1)} วินาที) กรุณาลดเวลาให้ไม่เกิน 15.0 วินาที`;
+
+                timelineProgressLabel.className = 'font-bold text-yellow-300';
+                timelineProgressBar.className = 'h-full bg-yellow-400 transition-all duration-300';
+
+                outputWarningCard.classList.remove('hidden');
+                promptOutputsWrapper.classList.add('opacity-40', 'pointer-events-none', 'select-none');
+
+                generatePromptBtn.disabled = true;
+                generatePromptBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+                if (manualTrigger) {
+                    showToast(`ไม่สามารถสร้าง Prompt ได้: เวลารวม ${totalDuration.toFixed(1)}s เกิน 15.0s`, 'warning');
+                }
+            } else {
+                totalDurationText.className = 'text-xs sm:text-sm font-extrabold text-white leading-none';
+                headerDurationBox.className = 'bg-black/90 border-2 border-red-500 px-2.5 py-1 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap';
+                headerWarningIcon.classList.add('hidden');
+
+                globalWarningBanner.classList.add('hidden');
+
+                timelineProgressLabel.className = 'font-bold text-white';
+                timelineProgressBar.className = 'h-full bg-red-600 transition-all duration-300';
+
+                outputWarningCard.classList.add('hidden');
+                promptOutputsWrapper.classList.remove('opacity-40', 'pointer-events-none', 'select-none');
+
+                generatePromptBtn.disabled = false;
+                generatePromptBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                if (manualTrigger) {
+                    showToast('อัปเดตชุดคำสั่ง Prompt เรียบร้อยแล้ว');
+                }
+            }
+
+            const directorNotes = document.getElementById('directorNotesInput').value.trim();
+            const arObj = ASPECT_RATIOS.find(a => a.val === selectedAspectRatio) || ASPECT_RATIOS[0];
+            let enSections = [];
+            let thSections = [];
+
+            enSections.push(`Cinematic high-definition multi-scene video, Aspect Ratio: ${arObj.val} (${arObj.en}), Total Duration: ${totalDuration.toFixed(1)}s (strictly within 15.0s limit). --ar ${arObj.val}`);
+            thSections.push(`=== สรุปข้อมูลวิดีโอ AI Video Prompt Builder v 2 ===\n• อัตราส่วนวิดีโอ: ${arObj.th}\n• ความยาวรวม: ${totalDuration.toFixed(1)} / 15.0 วินาที`);
+
+            // 1. Scenes Summary
+            const allLightings = getAllLightingItems();
+            let enScenes = scenes.map((s, idx) => {
+                const refNote = s.imageUrl ? ` [Ref Image: ${s.fileName || `Scene_${idx + 1}`}]` : '';
+                return `- Scene ${idx + 1} ("${s.name}")${refNote}: ${findEn(allLightings, s.lighting)}, default ${findEn(OPTIONS.defaultCameraAngles, s.cameraAngle)}.`;
+            });
+            enSections.push(`[1. SCENES LIBRARY]:\n${enScenes.join('\n')}`);
+
+            thSections.push(`\n[1. คลังฉากหลัง (${scenes.length} ฉาก)]`);
+            scenes.forEach((s, idx) => {
+                thSections.push(`• ฉาก #${idx + 1} (${s.name}): ${s.lighting} | ${s.cameraAngle}${s.imageUrl ? ' [มีภาพอ้างอิง]' : ''}`);
+            });
+
+            // 2. Characters Summary
+            let enChars = characters.map((c, idx) => {
+                let parts = [`Age: ${c.age || 'adult'} years old`];
+                if (c.faceImageUrl) {
+                    parts.push(`From Face/Body Reference (${c.faceFileName || `Char${idx + 1}_Face`}), extract ONLY facial features, hairstyle, skin tone, and physical body build, COMPLETELY EXCLUDING any original clothing shown in that photo`);
+                }
+                if (c.clothesImageUrl) {
+                    parts.push(`Dress in the exact outfit and ALL accessories from Clothing Reference (${c.clothesFileName || `Char${idx + 1}_Outfit`}), strictly including hats, headbands, glasses, watches, bags, and shoes`);
+                }
+                if (c.notes) parts.push(`Additional details: ${c.notes}`);
+                return `- Character ${idx + 1} ("${c.name}"): ${parts.join('. ')}.`;
+            });
+            enSections.push(`[2. CHARACTERS & VISUAL EXTRACTION]:\n${enChars.join('\n')}`);
+
+            thSections.push(`\n[2. ข้อมูลตัวละคร (${characters.length} ตัว)]`);
+            characters.forEach((c, idx) => {
+                let cInfo = [`อายุ ${c.age || '-'} ปี`];
+                if (c.faceImageUrl) cInfo.push('ดึงเฉพาะใบหน้า/ทรงผม/สีผิว/รูปร่าง (ไม่เอาชุดเดิม)');
+                if (c.clothesImageUrl) cInfo.push('อ้างอิงชุด+เครื่องประดับครบ (หมวก ที่คาดผม แว่น นาฬิกา กระเป๋า รองเท้า)');
+                if (c.notes) cInfo.push(c.notes);
+                thSections.push(`• ตัวละคร #${idx + 1} (${c.name}): ${cInfo.join(' | ')}`);
+            });
+
+            // 3. Props & Objects Placement Summary
+            thSections.push(`\n[3. วัตถุสิ่งของในฉาก (${props.length} ชิ้น)]`);
+            if (props.length > 0) {
+                let enProps = props.map((p, idx) => {
+                    const refNote = p.imageUrl ? ` [Ref Image: ${p.fileName || `Prop_${idx + 1}`}]` : '';
+                    const presetObj = PROP_PLACEMENTS.find(pl => pl.val === p.placementPreset);
+                    const presetEn = presetObj && presetObj.en ? presetObj.en : '';
+                    const customCmd = (p.placementCommand || '').trim();
+                    let placementDetailsEn = [];
+                    if (presetEn) placementDetailsEn.push(presetEn);
+                    if (customCmd) placementDetailsEn.push(`specific placement instruction: "${customCmd}"`);
+                    const placementStrEn = placementDetailsEn.length > 0 ? placementDetailsEn.join(', ') : 'placed naturally in the scene';
+
+                    const presetTh = presetObj ? presetObj.th : '';
+                    const customTh = customCmd ? ` | คำสั่งจุดวาง: "${customCmd}"` : '';
+                    thSections.push(`• วัตถุ #${idx + 1} (${p.name})${p.imageUrl ? ' [มีภาพอ้างอิง]' : ''}: ${presetTh}${customTh}`);
+
+                    return `- Prop/Object ${idx + 1} ("${p.name}")${refNote}: ${placementStrEn}.`;
+                });
+                enSections.push(`[3. PROPS & OBJECTS PLACEMENT IN SCENE]:\n${enProps.join('\n')}`);
+            } else {
+                thSections.push(`• ไม่มีวัตถุสิ่งของเพิ่มเติม`);
+            }
+
+            // 4. Sequential Action Timeline with Independent Per-Actor Emotion/Expression/Action/Gaze & Simultaneous Speech Mode
+            let enTimeline = [];
+            thSections.push(`\n[4. ลำดับเหตุการณ์ตามช่วงเวลา (${timelineRows.length} บรรทัด)]`);
+            let runningTime = 0;
+            const allActions = getAllActionItems();
+
+            timelineRows.forEach((row, idx) => {
+                const dur = Math.max(0.1, parseFloat(row.duration) || 0.1);
+                const start = runningTime;
+                runningTime = Math.round((runningTime + dur) * 10) / 10;
+                const end = runningTime;
+
+                const scene = scenes.find(s => s.id === row.sceneId) || scenes[0];
+                const sceneIdx = scenes.findIndex(s => s.id === scene.id) + 1;
+
+                const activeChars = row.actors
+                    .map(idStr => characters.find(c => String(c.id) === idStr))
+                    .filter(Boolean);
+
+                const isAll = characters.length > 1 && activeChars.length === characters.length;
+                const isSimultaneous = (row.dialogueMode || 'sequential') === 'simultaneous';
+                const timingVal = row.speechTiming || 'during';
+                const timingObj = SPEECH_TIMINGS.find(st => st.val === timingVal) || SPEECH_TIMINGS[1];
+
+                const dialogueModeLabelEn = isSimultaneous
+                    ? 'SIMULTANEOUSLY TOGETHER IN UNISON (all active characters speak at the exact same time)'
+                    : 'SEQUENTIALLY ONE AFTER ANOTHER (in listed speaker order)';
+                const dialogueModeLabelTh = isSimultaneous
+                    ? 'พูดพร้อมกันในเวลาเดียวกัน (Speak Together in Unison)'
+                    : 'พูดเรียงตามลำดับ (Sequential)';
+
+                const actorHeaderEn = isAll
+                    ? `ALL characters (${activeChars.map(c => `"${c.name}"`).join(', ')})`
+                    : activeChars.map(c => `"${c.name}"`).join(' & ');
+                const actorHeaderTh = isAll
+                    ? `ตัวละครทั้งหมด (${activeChars.map(c => c.name).join(', ')})`
+                    : activeChars.map(c => c.name).join(' และ ');
+
+                // Build per-character blocks (each character has independent dialogue, voice, emotion, expression, action, gaze)
+                let perActorEnBlocks = [];
+                let perActorThBlocks = [];
+                let anyPause = false;
+                let anyDialogue = false;
+
+                activeChars.forEach((actorObj, orderIdx) => {
+                    const aIdStr = String(actorObj.id);
+                    ensureRowActorMaps(row, aIdStr);
+
+                    const rawD = row.dialoguesByActor[aIdStr] || '';
+                    const parsedD = formatDialogueWithBreathingPause(rawD);
+                    const aVoiceTh = row.voiceByActor[aIdStr];
+                    const aVoiceEn = findEn(OPTIONS.voices, aVoiceTh);
+
+                    const aEmoTh = row.emotionByActor[aIdStr];
+                    const aEmoEn = findEn(OPTIONS.emotions, aEmoTh);
+
+                    const aExpTh = row.expressionByActor[aIdStr];
+                    const aExpEn = findEn(OPTIONS.expressions, aExpTh);
+
+                    const aActTh = row.actionByActor[aIdStr];
+                    const aActEn = findEn(allActions, aActTh);
+
+                    const aGaze = resolveGazeForActor(row.gazeByActor[aIdStr]);
+
+                    if (parsedD.hasDialogue) {
+                        anyDialogue = true;
+                        if (parsedD.hasPause) anyPause = true;
+                    }
+
+                    const speakerPrefixEn = isSimultaneous
+                        ? `Character "${actorObj.name}" (speaking simultaneously)`
+                        : `Speaker #${orderIdx + 1} "${actorObj.name}"`;
+
+                    const speechPartEn = parsedD.hasDialogue
+                        ? `dialogue (${aVoiceEn}): "${parsedD.enText}"`
+                        : `no spoken lines`;
+
+                    perActorEnBlocks.push(
+                        `  * ${speakerPrefixEn}: ${speechPartEn} | emotion: ${aEmoEn} | facial expression: ${aExpEn} | body action: ${aActEn} | gaze: ${aGaze.en}.`
+                    );
+
+                    const speakerPrefixTh = isSimultaneous
+                        ? `พูดพร้อมกัน (${actorObj.name})`
+                        : `บทพูดที่ ${orderIdx + 1} (${actorObj.name})`;
+                    const speechPartTh = parsedD.hasDialogue
+                        ? `บทพูด [${aVoiceTh}]: "${parsedD.thText}"`
+                        : `ไม่มีบทพูด`;
+
+                    perActorThBlocks.push(
+                        `    - ${speakerPrefixTh}: ${speechPartTh}\n` +
+                        `      อารมณ์: ${aEmoTh} | สีหน้า: ${aExpTh} | ท่าทาง: ${aActTh} | สายตา: ${aGaze.th}`
+                    );
+                });
+
+                // Custom Freeform Action + Target resolution
+                let customEn = '';
+                let customTh = '';
+                if (row.customAction && row.customAction.trim()) {
+                    let targetSuffixEn = '';
+                    let targetSuffixTh = '';
+                    if (row.targetChar === 'all_chars') {
+                        targetSuffixEn = ' interacting with all characters in the scene';
+                        targetSuffixTh = ' (กระทำกับตัวละครทั้งหมด)';
+                    } else if (row.targetChar === 'camera') {
+                        targetSuffixEn = ' directed toward the camera/viewer';
+                        targetSuffixTh = ' (กระทำต่อกล้อง/ผู้ชม)';
+                    } else if (row.targetChar.startsWith('char:')) {
+                        const tId = Number(row.targetChar.split(':')[1]);
+                        const tChar = characters.find(c => c.id === tId);
+                        if (tChar) {
+                            targetSuffixEn = ` interacting with "${tChar.name}"`;
+                            targetSuffixTh = ` (กระทำกับ ${tChar.name})`;
+                        }
+                    }
+                    customEn = ` Scene-wide custom action: "${row.customAction.trim()}"${targetSuffixEn}.`;
+                    customTh = `\n  การกระทำอิสระเพิ่มเติม: "${row.customAction.trim()}"${targetSuffixTh}`;
+                }
+
+                // Camera Focus, Zoom, Move resolution
+                let camPartsEn = [];
+                let camPartsTh = [];
+                if (row.cameraFocus === 'selected_faces') {
+                    const activeNamesEn = activeChars.map(c => `"${c.name}"`).join(' and ');
+                    const activeNamesTh = activeChars.map(c => c.name).join(' และ ');
+                    camPartsEn.push(`close-up focus on active character(s) ${activeNamesEn}'s face(s)`);
+                    camPartsTh.push(`โฟกัสใบหน้าตัวละครที่เลือก (${activeNamesTh})`);
+                } else if (row.cameraFocus.startsWith('face:')) {
+                    const fId = Number(row.cameraFocus.split(':')[1]);
+                    const fChar = characters.find(c => c.id === fId);
+                    if (fChar) {
+                        camPartsEn.push(`close-up focus on "${fChar.name}"'s face`);
+                        camPartsTh.push(`โฟกัสใบหน้า ${fChar.name}`);
+                    }
+                } else if (row.cameraFocus === 'eyes_ecu') {
+                    camPartsEn.push('extreme close-up focus on the character\'s eyes');
+                    camPartsTh.push('โฟกัสเจาะลึกที่ดวงตา');
+                } else if (row.cameraFocus === 'hands_action') {
+                    camPartsEn.push('sharp focus on hands and physical action');
+                    camPartsTh.push('โฟกัสที่มือและการกระทำ');
+                } else if (row.cameraFocus === 'full_outfit') {
+                    camPartsEn.push('full-body focus showcasing complete outfit and accessories');
+                    camPartsTh.push('โฟกัสชุดและเครื่องแต่งกายเต็มตัว');
+                } else if (row.cameraFocus === 'rack_fg_bg') {
+                    camPartsEn.push('cinematic rack focus shifting from foreground to background');
+                    camPartsTh.push('ดึงโฟกัสจากหน้าไปหลัง');
+                } else if (row.cameraFocus === 'rack_bg_fg') {
+                    camPartsEn.push('cinematic rack focus shifting from background to foreground');
+                    camPartsTh.push('ดึงโฟกัสจากหลังมาหน้า');
+                } else if (row.cameraFocus === 'deep_focus') {
+                    camPartsEn.push('deep focus keeping foreground and background crisp');
+                    camPartsTh.push('ชัดลึกทั้งภาพ');
+                }
+                const zoomObj = OPTIONS.cameraZooms.find(z => z.val === row.cameraZoom);
+                if (zoomObj && zoomObj.en) {
+                    camPartsEn.push(zoomObj.en);
+                    camPartsTh.push(zoomObj.th);
+                }
+                const moveObj = OPTIONS.cameraMoves.find(m => m.val === row.cameraMove);
+                if (moveObj && moveObj.en) {
+                    camPartsEn.push(moveObj.en);
+                    camPartsTh.push(moveObj.th);
+                }
+
+                const transEn = findEn(OPTIONS.transitions, row.transition);
+
+                // Timing instruction between speech & action
+                let timingInstructionEn = '';
+                if (anyDialogue) {
+                    if (timingVal === 'before') {
+                        timingInstructionEn = 'Timing: characters speak their lines FIRST, and THEN perform their physical body gestures.';
+                    } else if (timingVal === 'after') {
+                        timingInstructionEn = 'Timing: characters perform their physical body gestures FIRST, and THEN speak their lines.';
+                    } else {
+                        timingInstructionEn = 'Timing: characters speak their lines SIMULTANEOUSLY WHILE performing their physical body gestures.';
+                    }
+                }
+
+                const pauseInstructionEn = anyPause
+                    ? ' Where [pauses briefly to take a breath] / "..." appears, the speaker pauses briefly to take a breath mid-speech.'
+                    : '';
+
+                enTimeline.push(
+                    `Step ${idx + 1} [${start.toFixed(1)}s - ${end.toFixed(1)}s]: Transition (${transEn}) into Scene ${sceneIdx} ("${scene.name}"). ` +
+                    `Active Cast: ${actorHeaderEn}. Dialogue Delivery Mode: ${dialogueModeLabelEn}. ${timingInstructionEn}${pauseInstructionEn}\n` +
+                    `${perActorEnBlocks.join('\n')}` +
+                    `${customEn ? `\n ${customEn}` : ''}` +
+                    `${camPartsEn.length > 0 ? `\n  Camera Direction: ${camPartsEn.join(', ')}.` : ''}`
+                );
+
+                thSections.push(
+                    `• ลำดับ ${idx + 1} [${start.toFixed(1)}s - ${end.toFixed(1)}s] ฉาก #${sceneIdx} (${scene.name}) | เปลี่ยนฉาก: ${row.transition}\n` +
+                    `  ตัวละครในฉาก: ${actorHeaderTh} | รูปแบบการพูด: ${dialogueModeLabelTh} | จังหวะ: ${timingObj.shortTh}\n` +
+                    `${perActorThBlocks.join('\n')}${customTh}` +
+                    `${camPartsTh.length > 0 ? `\n  กล้อง: ${camPartsTh.join(', ')}` : ''}`
+                );
+            });
+
+            enSections.push(`[4. SEQUENTIAL ACTION TIMELINE]:\n${enTimeline.join('\n\n')}`);
+
+            if (directorNotes) {
+                enSections.push(`[DIRECTOR NOTES]: ${directorNotes}`);
+                thSections.push(`\n[หมายเหตุผู้กำกับ]: ${directorNotes}`);
+            }
+
+            enSections.push(`Ensure strict visual consistency for character faces/hair/skin tone (ignoring original outfit in face photos), full fidelity to uploaded outfits/accessories and placed scene props/objects, accurate per-character emotions/expressions/actions/gaze, exact adherence to sequential vs simultaneous unison speech delivery, and natural lip-sync with brief breathing pauses wherever "..." appears. Aspect Ratio ${arObj.val}.`);
+
+            document.getElementById('enPromptOutput').value = enSections.join('\n\n');
+            document.getElementById('thPromptOutput').value = thSections.join('\n');
+
+            renderAssetsSummary();
+        }
+
+        function renderAssetsSummary() {
+            const container = document.getElementById('assetsPreviewContainer');
+            const countLabel = document.getElementById('assetCountLabel');
+            let assets = [];
+
+            scenes.forEach((s, idx) => {
+                if (s.imageUrl) {
+                    assets.push({
+                        label: `ฉาก #${idx + 1}`,
+                        img: s.imageUrl,
+                        fileName: s.fileName || `scene_${idx + 1}.png`,
+                        tagColor: 'bg-red-600'
+                    });
+                }
+            });
+
+            characters.forEach((c, idx) => {
+                if (c.faceImageUrl) {
+                    assets.push({
+                        label: `${c.name} (หน้า)`,
+                        img: c.faceImageUrl,
+                        fileName: c.faceFileName || `char_${idx + 1}_face.png`,
+                        tagColor: 'bg-black border border-red-500'
+                    });
+                }
+                if (c.clothesImageUrl) {
+                    assets.push({
+                        label: `${c.name} (ชุด)`,
+                        img: c.clothesImageUrl,
+                        fileName: c.clothesFileName || `char_${idx + 1}_clothes.png`,
+                        tagColor: 'bg-red-600'
+                    });
+                }
+            });
+
+            props.forEach((p, idx) => {
+                if (p.imageUrl) {
+                    assets.push({
+                        label: `วัตถุ #${idx + 1}: ${p.name}`,
+                        img: p.imageUrl,
+                        fileName: p.fileName || `prop_${idx + 1}.png`,
+                        tagColor: 'bg-red-700 border border-white/70'
+                    });
+                }
+            });
+
+            countLabel.textContent = `${assets.length} รูป`;
+
+            if (assets.length === 0) {
+                container.innerHTML = `<div class="col-span-3 text-xs text-white/75 py-2">ยังไม่มีการอัปโหลดรูปภาพอ้างอิง</div>`;
+                return;
+            }
+
+            container.innerHTML = assets.map(item => `
+                <a href="${item.img}" download="${escapeHTML(item.fileName)}" class="group relative h-20 rounded-xl overflow-hidden bg-black/80 border-2 border-red-500 block" title="คลิกเพื่อดาวน์โหลด ${escapeHTML(item.label)}">
+                    <img src="${item.img}" alt="${escapeHTML(item.label)}" class="w-full h-full object-cover">
+                    <span class="absolute bottom-1 left-1 right-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-white truncate ${item.tagColor}">${escapeHTML(item.label)}</span>
+                    <div class="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] font-bold text-white">ดาวน์โหลด</div>
+                </a>
+            `).join('');
+        }
+
+        function copyText(elementId, labelName) {
+            const el = document.getElementById(elementId);
+            if (!el || !el.value) return;
+            el.select();
+            el.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                showToast(`คัดลอก ${labelName} เรียบร้อยแล้ว!`);
+            } catch (err) {
+                showToast('ไม่สามารถคัดลอกอัตโนมัติได้ กรุณากด Ctrl+C', 'warning');
+            }
+        }
+
+        function resetAllData() {
+            scenes.forEach(s => { if (s.imageUrl) URL.revokeObjectURL(s.imageUrl); });
+            characters.forEach(c => {
+                if (c.faceImageUrl) URL.revokeObjectURL(c.faceImageUrl);
+                if (c.clothesImageUrl) URL.revokeObjectURL(c.clothesImageUrl);
+            });
+            props.forEach(p => { if (p.imageUrl) URL.revokeObjectURL(p.imageUrl); });
+            document.getElementById('directorNotesInput').value = '';
+            initApp();
+            showToast('รีเซ็ตข้อมูลทั้งหมดกลับสู่ค่าเริ่มต้นแล้ว', 'warning');
+        }
+
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
