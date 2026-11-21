@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProRetouch AI — Studio Prompt Generator for Gemini & ChatGPT</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Kanit & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Kanit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        studio: {
+                            950: '#09090b',
+                            900: '#121215',
+                            850: '#18181c',
+                            800: '#202026',
+                            700: '#2e2e36',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar for Studio Feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121215;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2e2e36;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f59e0b;
+        }
+        
+        /* Smooth transitions */
+        .option-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .option-card:hover {
+            border-color: rgba(245, 158, 11, 0.5);
+        }
+        .option-card.active {
+            background-color: rgba(245, 158, 11, 0.12);
+            border-color: #f59e0b;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.1);
+        }
+        .chip-btn {
+            transition: all 0.18s ease;
+        }
+        .chip-btn.active {
+            background-color: #f59e0b;
+            color: #09090b;
+            font-weight: 500;
+            border-color: #f59e0b;
+        }
+    </style>
+</head>
+<body class="bg-studio-950 text-zinc-200 font-sans antialiased selection:bg-amber-500 selection:text-zinc-950 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-studio-900/90 backdrop-blur-md border-b border-zinc-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <!-- Brand / Editable Studio Title -->
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-zinc-950 shadow-lg shadow-amber-500/20 shrink-0">
+                    <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h1 id="studioTitle" contenteditable="true" spellcheck="false" title="คลิกเพื่อแก้ไขชื่อสตูดิโอของคุณ" class="text-base sm:text-lg font-semibold text-white tracking-tight truncate outline-none focus:ring-1 focus:ring-amber-500 rounded px-1 -mx-1 cursor-text">
+                            ProRetouch AI Studio
+                        </h1>
+                        <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                            Identity Lock Edition
+                        </span>
+                    </div>
+                    <p class="text-xs text-zinc-400 truncate">เครื่องมือสร้างคำสั่งปรับแต่งภาพถ่าย ล็อกใบหน้าเดิม & รีทัชระดับโปร</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2 shrink-0">
+                <button onclick="resetAll()" class="px-3 py-2 rounded-xl bg-studio-800 hover:bg-studio-700 text-zinc-300 text-xs sm:text-sm font-medium border border-zinc-700/80 transition flex items-center gap-1.5" title="รีเซ็ตค่าทั้งหมด">
+                    <i class="fa-solid fa-rotate-left text-xs"></i>
+                    <span class="hidden sm:inline">รีเซ็ตค่า</span>
+                </button>
+                <button onclick="copyPrompt()" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs sm:text-sm font-semibold shadow-lg shadow-amber-500/20 transition flex items-center gap-1.5">
+                    <i class="fa-regular fa-copy"></i>
+                    <span>คัดลอก Prompt</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Quick Pro Presets Bar -->
+    <section class="bg-studio-900/50 border-b border-zinc-800/60">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div class="flex items-center gap-2 text-xs font-medium text-amber-400 shrink-0">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>พรีเซ็ตระดับโปร (คลิกเดียวพร้อมใช้):</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="applyPreset('natural')" id="preset-natural" class="preset-btn px-3 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-700 border border-zinc-700/80 text-xs text-zinc-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-spa text-emerald-400"></i> รีทัชผิวเนียนใสธรรมชาติ
+                    </button>
+                    <button onclick="applyPreset('studio8k')" id="preset-studio8k" class="preset-btn px-3 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-700 border border-zinc-700/80 text-xs text-zinc-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-camera text-amber-400"></i> คมชัดระดับสตูดิโอ 8K
+                    </button>
+                    <button onclick="applyPreset('rescue')" id="preset-rescue" class="preset-btn px-3 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-700 border border-zinc-700/80 text-xs text-zinc-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-wand-sparkles text-cyan-400"></i> กู้ภาพเบลอ/แสงน้อยให้คมชัด
+                    </button>
+                    <button onclick="applyPreset('cinematic')" id="preset-cinematic" class="preset-btn px-3 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-700 border border-zinc-700/80 text-xs text-zinc-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-film text-purple-400"></i> โทนภาพยนตร์ละมุน
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main 2-Column Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- LEFT COLUMN: Controls & Parameters (7 Cols) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- 1. Identity & Face Lock (Crucial) -->
+                <div class="bg-studio-900 rounded-2xl border border-zinc-800/90 p-5 shadow-xl">
+                    <div class="flex items-start justify-between gap-2 mb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">1</span>
+                                <h2 class="text-base font-semibold text-white">การล็อกใบหน้าและอัตลักษณ์ (Identity & Face Lock)</h2>
+                            </div>
+                            <p class="text-xs text-zinc-400 mt-1">หัวใจสำคัญที่สุดในการสั่ง AI แต่งภาพที่แนบ โดยไม่ให้หน้าเพี้ยนเป็นคนอื่น</p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0">สำคัญสูงสุด</span>
+                    </div>
+
+                    <!-- Lock Level Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4" id="faceLockGroup">
+                        <div onclick="selectRadio('faceLock', 'strict100')" data-value="strict100" class="option-card active cursor-pointer rounded-xl bg-studio-850 border border-zinc-800 p-3.5">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-medium text-white">ล็อกโครงหน้า 100% (Strict Lock)</span>
+                                <i class="fa-solid fa-lock text-amber-400 text-xs"></i>
+                            </div>
+                            <p class="text-xs text-zinc-400 leading-relaxed">รักษารูปหน้า ดวงตา จมูก ปาก และเอกลักษณ์เดิมจากภาพแนบทุกจุด ห้ามเปลี่ยนโครงสร้าง</p>
+                        </div>
+                        <div onclick="selectRadio('faceLock', 'naturalEnhance')" data-value="naturalEnhance" class="option-card cursor-pointer rounded-xl bg-studio-850 border border-zinc-800 p-3.5">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-medium text-white">ล็อกใบหน้า + ปรับมุมแสงให้สมดุล</span>
+                                <i class="fa-solid fa-user-check text-zinc-400 text-xs"></i>
+                            </div>
+                            <p class="text-xs text-zinc-400 leading-relaxed">คงใบหน้าเดิมชัดเจน แต่ยอมให้ AI ปรับมิติแสงเงาบนใบหน้าให้ดูมีมิติและสมส่วนขึ้น</p>
+                        </div>
+                    </div>
+
+                    <!-- Specific Identity Details (Multi-select chips) -->
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-300 mb-2">รายละเอียดเฉพาะตัวที่ต้องการคงไว้ (เลือกได้หลายข้อ):</label>
+                        <div class="flex flex-wrap gap-2" id="identityDetailsGroup">
+                            <button type="button" onclick="toggleChip(this, 'identityDetails', 'exact expression and natural smile')" class="chip-btn active px-3 py-1.5 rounded-lg bg-studio-800 border border-zinc-700 text-xs text-zinc-300">
+                                คงสีหน้าและรอยยิ้มเดิม
+                            </button>
+                            <button type="button" onclick="toggleChip(this, 'identityDetails', 'original hairstyle, hair color, and hairline')" class="chip-btn active px-3 py-1.5 rounded-lg bg-studio-800 border border-zinc-700 text-xs text-zinc-300">
+                                คงทรงผมและสีผมเดิม
+                            </button>
+                            <button type="button" onclick="toggleChip(this, 'identityDetails', 'natural beauty marks, moles, and authentic facial proportions')" class="chip-btn px-3 py-1.5 rounded-lg bg-studio-800 border border-zinc-700 text-xs text-zinc-300">
+                                คงไฝ/จุดเด่นธรรมชาติบนหน้า
+                            </button>
+                            <button type="button" onclick="toggleChip(this, 'identityDetails', 'original clothing, accessories, and pose')" class="chip-btn active px-3 py-1.5 rounded-lg bg-studio-800 border border-zinc-700 text-xs text-zinc-300">
+                                คงชุด เครื่องประดับ และท่าโพสเดิม
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Pro Skin Retouching -->
+                <div class="bg-studio-900 rounded-2xl border border-zinc-800/90 p-5 shadow-xl">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">2</span>
+                            <h2 class="text-base font-semibold text-white">รีทัชผิวและความงาม (Pro Skin Retouching)</h2>
+                        </div>
+                        <p class="text-xs text-zinc-400 mt-1">ปรับผิวให้เนียนใสแบบมืออาชีพ โดยยังคงรูขุมขนธรรมชาติ ไม่ดูหลอกตาหรือเป็นพลาสติก</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4" id="skinRetouchGroup">
+                        <div onclick="selectRadio('skinRetouch', 'naturalPores')" data-value="naturalPores" class="option-card active cursor-pointer rounded-xl bg-studio-850 border border-zinc-800 p-3.5">
+                            <div class="text-sm font-medium text-white mb-1">เนียนใสมีรูขุมขน (Natural Texture)</div>
+                            <p class="text-xs text-zinc-400">ลบรอยสิว จุดด่างดำ ริ้วรอยใต้ตา แต่ยังคงพื้นผิวรูขุมขนจริง ดูไม่ออกว่าแต่ง</p>
+                        </div>
+                        <div onclick="selectRadio('skinRetouch', 'editorialFreq')" data-value="editorialFreq" class="option-card cursor-pointer rounded-xl bg-studio-850 border border-zinc-800 p-3.5">
+                            <div class="text-sm font-medium text-white mb-1">รีทัชระดับนิตยสาร (Editorial Retouch)</div>
+                            <p class="text-xs text-zinc-400">เทคนิค Frequency Separation สีผิวสม่ำเสมอทั่วใบหน้า เนียนละเอียดระดับแฟชั่น</p>
+                        </div>
+                        <div onclick="selectRadio('skinRetouch', 'glassGlow')" data-value="glassGlow" class="option-card cursor-pointer rounded-xl bg-studio-850 border border-zinc-800 p-3.5">
+                            <div class="text-sm font-medium text-white mb-1">ผิวฉ่ำโกลว์สุขภาพดี (Dewy Glass Skin)</div>
+                            <p class="text-xs text-zinc-400">ผิวกระจ่างใส มีประกายแสงสะท้อนนุ่มนวลบนโหนกแก้มและสันจมูก</p>
+                        </div>
+                        <div onclick="selectRadio('skinRetouch', 'minimalClean')" data-value="minimalClean" class="option-card cursor-pointer rounded-xl bg-studio-850 border border-zinc-800 p-3.5">
+                            <div class="text-sm font-medium text-white mb-1">เก็บรายละเอียดเล็กน้อย (Minimal Clean)</div>
+                            <p class="text-xs text-zinc-400">ลบเฉพาะความมันส่วนเกินและรอยตำหนิชั่วคราว คงความสมจริงสูงสุด</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-300 mb-2">เจาะจงความคมชัดส่วนสำคัญบนใบหน้า:</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="toggleChip(this, 'faceDetails', 'crisp natural catchlights in the eyes with clear iris detail')" class="chip-btn active px-3 py-1.5 rounded-lg bg-studio-800 border border-zinc-700 text-xs text-zinc-300">
+                                แววตาคมชัด มีประกายแสง
+                            </button>
+                            <button type="button" onclick="toggleChip(this, 'faceDetails', 'sharp individual eyelashes and well-defined natural eyebrows')" class="chip-btn active px-3 py-1.5 rounded-lg bg-studio-800 border border-zinc-700 text-xs text-zinc-300">
+                                ขนตาและคิ้วคมเรียงเส้น
+                            </button>
+                            <button type="button" onclick="toggleChip(this, 'faceDetails', 'fine natural hair strands detail without frizz')" class="chip-btn px-3 py-1.5 rounded-lg bg-studio-800 border border-zinc-700 text-xs text-zinc-300">
+                                เส้นผมเรียงเส้นสวย ไม่ชี้ฟู
+                            </button>
+                            <button type="button" onclick="toggleChip(this, 'faceDetails', 'natural hydrated lips texture and clean teeth')" class="chip-btn px-3 py-1.5 rounded-lg bg-studio-800 border border-zinc-700 text-xs text-zinc-300">
+                                ริมฝีปากและฟันดูเป็นธรรมชาติ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Sharpness & Optical Quality -->
+                <div class="bg-studio-900 rounded-2xl border border-zinc-800/90 p-5 shadow-xl">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">3</span>
+                            <h2 class="text-base font-semibold text-white">ความคมชัดและคุณภาพเลนส์ (Sharpness & Lens)</h2>
+                        </div>
+                        <p class="text-xs text-zinc-400 mt-1">กู้ภาพที่แตก เบลอ หรือความละเอียดต่ำ ให้คมชัดเหมือนถ่ายด้วยกล้องโปรฟูลเฟรม</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-300 mb-2">ระดับความคมชัด (Resolution & Clarity)</label>
+                            <select id="sharpnessSelect" onchange="generatePrompt()" class="w-full bg-studio-850 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                                <option value="tackSharp8k">Tack Sharp 8K — คมกริบระดับสตูดิโอ ขจัดนอยส์และรอยแตกของภาพ</option>
+                                <option value="rescueBlur">De-blur & Upscale — แก้ภาพเบลอ ภาพสั่น ให้กลับมาคมชัด</option>
+                                <option value="naturalSharp">Natural Optical Sharp — คมชัดพอดีตามธรรมชาติ ไม่แข็งกระด้าง</option>
+                                <option value="highMicro">High Micro-Contrast — เน้นมิติพื้นผิวเสื้อผ้าและรายละเอียดชัดเจน</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-300 mb-2">มิติเลนส์และฉากหลัง (Lens & Depth of Field)</label>
+                            <select id="lensSelect" onchange="generatePrompt()" class="w-full bg-studio-850 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                                <option value="keepBg">คงระยะชัดลึกและฉากหลังเดิมตามภาพต้นฉบับ</option>
+                                <option value="85mmBokeh">85mm f/1.4 Portrait — หน้าชัดเป๊ะ ฉากหลังละลายโบเก้นุ่มนวล</option>
+                                <option value="50mmNatural">50mm f/1.2 Natural — ระยะสายตาธรรมชาติ ละลายหลังกำลังดี</option>
+                                <option value="35mmCrisp">35mm Documentary — คมชัดทั้งตัวแบบและบรรยากาศรอบข้าง</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Lighting & Color Grading -->
+                <div class="bg-studio-900 rounded-2xl border border-zinc-800/90 p-5 shadow-xl">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">4</span>
+                            <h2 class="text-base font-semibold text-white">การจัดแสงและโทนสี (Lighting & Color Grading)</h2>
+                        </div>
+                        <p class="text-xs text-zinc-400 mt-1">ปรับทิศทางแสงให้ใบหน้าดูมีมิติ แก้หน้ามืด หรือเปลี่ยนมู้ดโทนสีให้ดูแพงขึ้น</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-300 mb-2">การจัดแสง (Lighting Setup)</label>
+                            <select id="lightingSelect" onchange="generatePrompt()" class="w-full bg-studio-850 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                                <option value="balancedFix">สมดุลแสงธรรมชาติ (แก้หน้ามืด/แสงจ้าเกิน ให้เห็นรายละเอียดครบ)</option>
+                                <option value="softStudio">Soft Diffused Studio Light — แสงซอฟต์บ็อกซ์นุ่มนวล ขับผิวผ่อง</option>
+                                <option value="goldenRim">Golden Hour + Rim Light — แสงอุ่นยามเย็น พร้อมแสงขอบผมมีมิติ</option>
+                                <option value="windowLight">Natural Window Light — แสงธรรมชาติเข้าด้านข้าง ละมุนมีมิติ</option>
+                                <option value="cinematicMood">Cinematic Volumetric Light — แสงเงาแบบภาพยนตร์ ตัดกันอย่างมีศิลปะ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-300 mb-2">เกรดสีและโทนภาพ (Color Tone)</label>
+                            <select id="colorSelect" onchange="generatePrompt()" class="w-full bg-studio-850 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                                <option value="trueToLife">True-to-Life — สีสมจริงตามธรรมชาติ สีผิวถูกต้องแม่นยำ</option>
+                                <option value="warmEditorial">Warm Editorial — โทนอุ่นนุ่มนวล สไตล์นิตยสารเกาหลี/ญี่ปุ่น</option>
+                                <option value="commercialClean">Crisp Commercial Clean — สีสะอาด สว่างใส เหมาะกับภาพโปรไฟล์</option>
+                                <option value="kodakPortra">Kodak Portra 400 Film — โทนฟิล์มคลาสสิก สีผิวละมุน มีเกรนบางๆ</option>
+                                <option value="tealOrange">Cinematic Teal & Orange — โทนภาพยนตร์เข้มขรึม ดูทรงพลัง</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Negative Constraints & Guardrails -->
+                <div class="bg-studio-900 rounded-2xl border border-zinc-800/90 p-5 shadow-xl">
+                    <div class="mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">5</span>
+                            <h2 class="text-base font-semibold text-white">ข้อห้ามและเกราะป้องกันภาพเพี้ยน (Guardrails)</h2>
+                        </div>
+                        <p class="text-xs text-zinc-400 mt-1">คำสั่งห้ามเพื่อป้องกันไม่ให้ AI แต่งเกินจริงจนหน้าเปลี่ยนหรือผิวดูปลอม</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="constraintsGroup">
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-studio-850 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
+                            <input type="checkbox" checked value="Do not alter facial geometry, bone structure, or identity" onchange="generatePrompt()" class="w-4 h-4 rounded accent-amber-500">
+                            <span class="text-xs text-zinc-200">ห้ามเปลี่ยนโครงหน้าและเอกลักษณ์เดิม</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-studio-850 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
+                            <input type="checkbox" checked value="No plastic skin, no overly smoothed airbrushed texture, no beauty filter distortion" onchange="generatePrompt()" class="w-4 h-4 rounded accent-amber-500">
+                            <span class="text-xs text-zinc-200">ห้ามผิวพลาสติกหรือเบลอจนไร้รูขุมขน</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-studio-850 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
+                            <input type="checkbox" checked value="No watermark, no text, no signature, no artificial artifacts" onchange="generatePrompt()" class="w-4 h-4 rounded accent-amber-500">
+                            <span class="text-xs text-zinc-200">ห้ามใส่ลายน้ำ ตัวอักษร หรือสิ่งแปลกปลอม</span>
+                        </label>
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-studio-850 border border-zinc-800/80 cursor-pointer hover:border-zinc-700">
+                            <input type="checkbox" checked value="No distorted hands, fingers, or body proportions" onchange="generatePrompt()" class="w-4 h-4 rounded accent-amber-500">
+                            <span class="text-xs text-zinc-200">ห้ามนิ้วมือหรือสัดส่วนร่างกายบิดเบี้ยว</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 6. Custom Additional Instructions -->
+                <div class="bg-studio-900 rounded-2xl border border-zinc-800/90 p-5 shadow-xl">
+                    <label for="customInput" class="block text-sm font-semibold text-white mb-1">
+                        <i class="fa-solid fa-pen-to-square text-amber-400 mr-1.5"></i>คำสั่งเพิ่มเติมเฉพาะจุด (ถ้ามี)
+                    </label>
+                    <p class="text-xs text-zinc-400 mb-3">พิมพ์สิ่งที่ต้องการปรับแก้เพิ่ม เช่น ลบคนข้างหลัง, เปลี่ยนสีสูทเป็นสีกรมท่า, หรือทำให้รอยยิ้มดูสดใสขึ้น (พิมพ์ได้ทั้งไทยและอังกฤษ)</p>
+                    <textarea id="customInput" rows="2" oninput="generatePrompt()" placeholder="เช่น ลบสายกระเป๋าที่พาดไหล่ออก, ปรับฉากหลังให้ดูสะอาดตาขึ้น..." class="w-full bg-studio-850 border border-zinc-700 rounded-xl p-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"></textarea>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Real-time Prompt Output & Guide (5 Cols, Sticky) -->
+            <div class="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
+                
+                <!-- Platform Switcher & Output Box -->
+                <div class="bg-studio-900 rounded-2xl border border-amber-500/30 p-5 shadow-2xl shadow-black/50">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Ready-to-Use Prompt
+                        </span>
+                        <span id="charCount" class="text-[11px] font-mono text-zinc-400">0 chars</span>
+                    </div>
+
+                    <!-- AI Platform Mode Tabs -->
+                    <div class="grid grid-cols-2 gap-1.5 p-1 bg-studio-950 rounded-xl border border-zinc-800 mb-4">
+                        <button type="button" onclick="setPlatform('gemini')" id="tab-gemini" class="py-2 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 bg-amber-500 text-zinc-950 shadow">
+                            <i class="fa-solid fa-sparkles"></i> Gemini Mode
+                        </button>
+                        <button type="button" onclick="setPlatform('chatgpt')" id="tab-chatgpt" class="py-2 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-zinc-400 hover:text-white">
+                            <i class="fa-solid fa-robot"></i> ChatGPT Mode
+                        </button>
+                    </div>
+
+                    <!-- Mode Explanation Badge -->
+                    <div id="platformDesc" class="mb-3 px-3 py-2 rounded-lg bg-studio-850 border border-zinc-800 text-[11px] text-zinc-300 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-info text-amber-400 shrink-0"></i>
+                        <span><strong>Gemini Mode:</strong> โครงสร้างประโยคบรรยายเชิงลึก อ้างอิงภาพที่แนบได้แม่นยำและเป็นธรรมชาติที่สุด</span>
+                    </div>
+
+                    <!-- Prompt Textarea -->
+                    <div class="relative group">
+                        <textarea id="promptOutput" rows="13" readonly class="w-full bg-studio-950 border border-zinc-800 rounded-xl p-4 font-mono text-xs sm:text-[13px] leading-relaxed text-zinc-100 focus:outline-none focus:border-amber-500/60 resize-none"></textarea>
+                    </div>
+
+                    <!-- Primary Copy Button -->
+                    <div class="mt-4 flex flex-col sm:flex-row gap-2.5">
+                        <button onclick="copyPrompt()" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-semibold text-sm shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 active:scale-[0.99]">
+                            <i class="fa-regular fa-copy text-base"></i>
+                            <span>คัดลอกคำสั่งไปใช้งานทันที</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pro Workflow Tips Card -->
+                <div class="bg-studio-900/80 rounded-2xl border border-zinc-800/80 p-4">
+                    <h3 class="text-xs font-semibold text-white uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                        <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                        เคล็ดลับการใช้งานให้หน้าเหมือนเดิม 100%
+                    </h3>
+                    <ul class="space-y-2 text-xs text-zinc-400 leading-relaxed">
+                        <li class="flex items-start gap-2">
+                            <span class="text-amber-400 font-bold">1.</span>
+                            <span><strong>แนบภาพต้นฉบับที่ชัดที่สุด:</strong> อัปโหลดรูปภาพของคุณลงในช่องแชทของ Gemini หรือ ChatGPT ก่อน แล้วจึงวาง Prompt นี้ตามลงไป</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-amber-400 font-bold">2.</span>
+                            <span><strong>หากหน้าเริ่มเปลี่ยนเล็กน้อย:</strong> ให้พิมพ์ย้ำต่อท้ายในแชทเดิมว่า <code class="text-amber-300 bg-studio-950 px-1.5 py-0.5 rounded">"Keep the exact face from the first image, only improve skin clarity and lighting"</code></span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-amber-400 font-bold">3.</span>
+                            <span><strong>ใช้ภาพหน้าตรงหรือเห็นดวงตาชัด:</strong> AI จะล็อกโครงสร้างกระดูกใบหน้าและแววตาได้แม่นยำกว่าภาพที่ก้มหน้าหรือใส่แว่นกันแดด</span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800/60 py-5 mt-8 text-center text-xs text-zinc-500">
+        <p>ProRetouch AI Studio — ออกแบบมาเพื่อการปรับแต่งภาพถ่ายระดับมืออาชีพบน Gemini และ ChatGPT</p>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-emerald-500 text-zinc-950 font-semibold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-sm">
+            <i class="fa-solid fa-circle-check text-base"></i>
+            <span id="toastMsg">คัดลอก Prompt เรียบร้อยแล้ว!</span>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        const state = {
+            platform: 'gemini', // 'gemini' | 'chatgpt'
+            faceLock: 'strict100',
+            identityDetails: [
+                'exact expression and natural smile',
+                'original hairstyle, hair color, and hairline',
+                'original clothing, accessories, and pose'
+            ],
+            skinRetouch: 'naturalPores',
+            faceDetails: [
+                'crisp natural catchlights in the eyes with clear iris detail',
+                'sharp individual eyelashes and well-defined natural eyebrows'
+            ]
+        };
+
+        // Dictionary of Prompt Directives
+        const directives = {
+            faceLock: {
+                strict100: {
+                    gemini: "Strictly preserve the exact facial identity, bone structure, eye shape, nose, lips, and unique features of the person from the attached reference photo with 100% accuracy.",
+                    chatgpt: "Strict 100% Identity Preservation — Maintain the exact facial geometry, bone structure, eye shape, nose, mouth, and authentic likeness of the subject in the attached reference image."
+                },
+                naturalEnhance: {
+                    gemini: "Maintain the unmistakable facial identity and features of the person in the attached reference photo, while subtly refining facial lighting and dimensional depth.",
+                    chatgpt: "High Identity Fidelity — Keep the subject's recognizable facial features and proportions from the reference photo while enhancing dimensional light balance."
+                }
+            },
+            skinRetouch: {
+                naturalPores: {
+                    gemini: "Perform professional high-end skin retouching: remove blemishes, acne, dark circles, and uneven patches while meticulously preserving authentic natural skin texture and fine micro-pores.",
+                    chatgpt: "Natural Texture Retouch — Remove blemishes, temporary spots, and under-eye fatigue while retaining genuine skin micro-pores and natural texture."
+                },
+                editorialFreq: {
+                    gemini: "Apply magazine-grade frequency separation skin retouching for an even, luminous, and refined complexion while keeping realistic skin grain.",
+                    chatgpt: "Editorial Frequency Separation — Smooth tonal transitions and even out skin complexion at a fashion-editorial level without losing natural skin grain."
+                },
+                glassGlow: {
+                    gemini: "Enhance the skin to a healthy, radiant, dewy glass-skin finish with soft, natural specular highlights on the cheekbones and bridge of the nose.",
+                    chatgpt: "Dewy Glass-Skin Glow — Clear, hydrated, and luminous skin tone with subtle, natural light reflections on high points of the face."
+                },
+                minimalClean: {
+                    gemini: "Apply subtle, minimal cleanup to reduce excess shine and minor distractions while keeping the raw authenticity of the original skin.",
+                    chatgpt: "Minimal Clean Retouch — Gently reduce harsh oil shine and minor distractions while preserving raw, unedited authenticity."
+                }
+            },
+            sharpness: {
+                tackSharp8k: "Upscale to ultra-high 8K resolution clarity with tack-sharp focus on the eyes, crisp edges, high micro-contrast, and complete removal of digital noise, grain, and JPEG compression artifacts.",
+                rescueBlur: "Restore and reconstruct fine details by removing motion blur, out-of-focus softness, and low-light noise, bringing the subject into crisp, clean studio focus.",
+                naturalSharp: "Enhance overall optical clarity and definition with balanced, natural sharpness that avoids over-sharpened halos.",
+                highMicro: "Boost fine micro-contrast across facial features, fabric textures, and intricate details for a rich, three-dimensional photographic look."
+            },
+            lens: {
+                keepBg: "Maintain the original camera perspective, focal length, and background environment from the reference image.",
+                "85mmBokeh": "Render with the optical characteristics of an 85mm f/1.4 portrait prime lens, keeping the subject razor-sharp against a creamy, softly blurred bokeh background.",
+                "50mmNatural": "Simulate a 50mm f/1.2 full-frame lens look with natural perspective and smooth, gentle background separation.",
+                "35mmCrisp": "Capture with a 35mm documentary lens aesthetic, keeping both the subject and surrounding environmental context crisp and detailed."
+            },
+            lighting: {
+                balancedFix: "Correct exposure imbalances by lifting shadow details on the face, recovering blown-out highlights, and creating a clean, balanced natural illumination.",
+                softStudio: "Illuminate the subject with soft, diffused studio key lighting and gentle fill light that flatters facial contours and creates dimensional depth.",
+                goldenRim: "Bathe the scene in warm golden-hour sunlight with a subtle, glowing rim light separating the hair and shoulders from the background.",
+                windowLight: "Use soft, directional natural window light that gently wraps around the face, creating rich, organic tonal depth.",
+                cinematicMood: "Apply dramatic cinematic lighting with controlled light falloff, subtle rim highlights, and rich, sculpted shadow depth."
+            },
+            color: {
+                trueToLife: "Grade with true-to-life, accurate color reproduction, natural white balance, and authentic, healthy skin tones free of unnatural color casts.",
+                warmEditorial: "Apply a warm, airy editorial color grade with soft creamy highlights, gentle contrast, and flattering warm-neutral skin tones.",
+                commercialClean: "Use a crisp, bright, commercial-grade color palette with clean whites, vibrant yet natural colors, and radiant skin tones.",
+                kodakPortra: "Emulate the timeless analog aesthetic of Kodak Portra 400 film with rich, organic skin tones, soft highlight roll-off, and subtle film grain.",
+                tealOrange: "Apply a sophisticated cinematic color grade with harmonious warm skin tones balanced against deep, cool teal shadows."
+            }
+        };
+
+        // Radio Card Selection Handler
+        function selectRadio(groupName, value) {
+            state[groupName] = value;
+            const container = document.getElementById(groupName + 'Group');
+            const cards = container.querySelectorAll('.option-card');
+            cards.forEach(card => {
+                if (card.dataset.value === value) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+            generatePrompt();
+        }
+
+        // Multi-Select Chip Handler
+        function toggleChip(btn, stateKey, value) {
+            btn.classList.toggle('active');
+            const index = state[stateKey].indexOf(value);
+            if (index > -1) {
+                state[stateKey].splice(index, 1);
+            } else {
+                state[stateKey].push(value);
+            }
+            generatePrompt();
+        }
+
+        // Switch Platform (Gemini vs ChatGPT)
+        function setPlatform(platform) {
+            state.platform = platform;
+            const tabGemini = document.getElementById('tab-gemini');
+            const tabChatgpt = document.getElementById('tab-chatgpt');
+            const desc = document.getElementById('platformDesc');
+
+            if (platform === 'gemini') {
+                tabGemini.className = "py-2 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 bg-amber-500 text-zinc-950 shadow";
+                tabChatgpt.className = "py-2 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-zinc-400 hover:text-white";
+                desc.innerHTML = `<i class="fa-solid fa-circle-info text-amber-400 shrink-0"></i><span><strong>Gemini Mode:</strong> โครงสร้างประโยคบรรยายเชิงลึก อ้างอิงภาพที่แนบได้แม่นยำและเป็นธรรมชาติที่สุด</span>`;
+            } else {
+                tabChatgpt.className = "py-2 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 bg-amber-500 text-zinc-950 shadow";
+                tabGemini.className = "py-2 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 text-zinc-400 hover:text-white";
+                desc.innerHTML = `<i class="fa-solid fa-circle-info text-cyan-400 shrink-0"></i><span><strong>ChatGPT Mode:</strong> โครงสร้างคำสั่งแบบแบ่งหัวข้อชัดเจน (Structured Directives) เหมาะกับ GPT-4o</span>`;
+            }
+            generatePrompt();
+        }
+
+        // Core Prompt Generator Engine
+        function generatePrompt() {
+            const sharpnessVal = document.getElementById('sharpnessSelect').value;
+            const lensVal = document.getElementById('lensSelect').value;
+            const lightingVal = document.getElementById('lightingSelect').value;
+            const colorVal = document.getElementById('colorSelect').value;
+            const customText = document.getElementById('customInput').value.trim();
+
+            // Gather checked negative constraints
+            const constraintCheckboxes = document.querySelectorAll('#constraintsGroup input[type="checkbox"]:checked');
+            const constraintsList = Array.from(constraintCheckboxes).map(cb => cb.value);
+
+            let finalPrompt = "";
+
+            if (state.platform === 'gemini') {
+                // Natural Descriptive Narrative Structure (Optimal for Gemini)
+                let sections = [];
+
+                // Intro + Identity Lock
+                let identitySentence = `Enhance and professionally retouch the attached reference photograph. ${directives.faceLock[state.faceLock].gemini}`;
+                if (state.identityDetails.length > 0) {
+                    identitySentence += ` Retain the subject's ${state.identityDetails.join(', ')}.`;
+                }
+                sections.push(identitySentence);
+
+                // Skin & Facial Details
+                let retouchSentence = directives.skinRetouch[state.skinRetouch].gemini;
+                if (state.faceDetails.length > 0) {
+                    retouchSentence += ` Ensure ${state.faceDetails.join(', ')}.`;
+                }
+                sections.push(retouchSentence);
+
+                // Sharpness & Optics
+                sections.push(`${directives.sharpness[sharpnessVal]} ${directives.lens[lensVal]}`);
+
+                // Lighting & Color
+                sections.push(`${directives.lighting[lightingVal]} ${directives.color[colorVal]}`);
+
+                // Custom Additions
+                if (customText) {
+                    sections.push(`Additional specific edits: ${customText}.`);
+                }
+
+                // Negative Guardrails
+                if (constraintsList.length > 0) {
+                    sections.push(`Strict constraints: ${constraintsList.join('; ')}.`);
+                }
+
+                finalPrompt = sections.join('\n\n');
+
+            } else {
+                // Structured Directive Format (Optimal for ChatGPT / GPT-4o Image)
+                let lines = [
+                    "Edit and enhance the attached reference photo following these exact specifications:",
+                    "",
+                    `[IDENTITY & FACE LOCK]`,
+                    `- ${directives.faceLock[state.faceLock].chatgpt}`
+                ];
+
+                if (state.identityDetails.length > 0) {
+                    lines.push(`- Preserve: ${state.identityDetails.join(', ')}.`);
+                }
+
+                lines.push("", `[PRO SKIN & DETAIL RETOUCHING]`);
+                lines.push(`- ${directives.skinRetouch[state.skinRetouch].chatgpt}`);
+                if (state.faceDetails.length > 0) {
+                    lines.push(`- Micro-details: ${state.faceDetails.join(', ')}.`);
+                }
+
+                lines.push("", `[SHARPNESS & OPTICAL LENS]`);
+                lines.push(`- ${directives.sharpness[sharpnessVal]}`);
+                lines.push(`- ${directives.lens[lensVal]}`);
+
+                lines.push("", `[LIGHTING & COLOR GRADING]`);
+                lines.push(`- ${directives.lighting[lightingVal]}`);
+                lines.push(`- ${directives.color[colorVal]}`);
+
+                if (customText) {
+                    lines.push("", `[ADDITIONAL INSTRUCTIONS]`);
+                    lines.push(`- ${customText}`);
+                }
+
+                if (constraintsList.length > 0) {
+                    lines.push("", `[NEGATIVE CONSTRAINTS — STRICTLY AVOID]`);
+                    constraintsList.forEach(c => lines.push(`- ${c}`));
+                }
+
+                finalPrompt = lines.join('\n');
+            }
+
+            const outputEl = document.getElementById('promptOutput');
+            outputEl.value = finalPrompt;
+            document.getElementById('charCount').textContent = `${finalPrompt.length} chars`;
+        }
+
+        // One-Click Pro Presets
+        function applyPreset(presetName) {
+            // Reset checkboxes first
+            document.querySelectorAll('#constraintsGroup input[type="checkbox"]').forEach(cb => cb.checked = true);
+
+            if (presetName === 'natural') {
+                selectRadio('faceLock', 'strict100');
+                selectRadio('skinRetouch', 'naturalPores');
+                document.getElementById('sharpnessSelect').value = 'naturalSharp';
+                document.getElementById('lensSelect').value = 'keepBg';
+                document.getElementById('lightingSelect').value = 'balancedFix';
+                document.getElementById('colorSelect').value = 'trueToLife';
+                showToast('ใช้พรีเซ็ต: รีทัชผิวเนียนใสธรรมชาติ');
+            } else if (presetName === 'studio8k') {
+                selectRadio('faceLock', 'strict100');
+                selectRadio('skinRetouch', 'editorialFreq');
+                document.getElementById('sharpnessSelect').value = 'tackSharp8k';
+                document.getElementById('lensSelect').value = '85mmBokeh';
+                document.getElementById('lightingSelect').value = 'softStudio';
+                document.getElementById('colorSelect').value = 'commercialClean';
+                showToast('ใช้พรีเซ็ต: คมชัดระดับสตูดิโอ 8K');
+            } else if (presetName === 'rescue') {
+                selectRadio('faceLock', 'strict100');
+                selectRadio('skinRetouch', 'naturalPores');
+                document.getElementById('sharpnessSelect').value = 'rescueBlur';
+                document.getElementById('lensSelect').value = '50mmNatural';
+                document.getElementById('lightingSelect').value = 'balancedFix';
+                document.getElementById('colorSelect').value = 'trueToLife';
+                showToast('ใช้พรีเซ็ต: กู้ภาพเบลอ/แสงน้อยให้คมชัด');
+            } else if (presetName === 'cinematic') {
+                selectRadio('faceLock', 'naturalEnhance');
+                selectRadio('skinRetouch', 'glassGlow');
+                document.getElementById('sharpnessSelect').value = 'highMicro';
+                document.getElementById('lensSelect').value = '85mmBokeh';
+                document.getElementById('lightingSelect').value = 'goldenRim';
+                document.getElementById('colorSelect').value = 'warmEditorial';
+                showToast('ใช้พรีเซ็ต: โทนภาพยนตร์ละมุน');
+            }
+
+            // Highlight active preset button briefly
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('border-amber-500', 'bg-amber-500/10'));
+            const activeBtn = document.getElementById('preset-' + presetName);
+            if (activeBtn) activeBtn.classList.add('border-amber-500', 'bg-amber-500/10');
+
+            generatePrompt();
+        }
+
+        // Reset to Default
+        function resetAll() {
+            document.getElementById('customInput').value = '';
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('border-amber-500', 'bg-amber-500/10'));
+            applyPreset('natural');
+            showToast('รีเซ็ตค่าเริ่มต้นทั้งหมดแล้ว');
+        }
+
+        // Copy to Clipboard (iFrame safe using execCommand fallback)
+        function copyPrompt() {
+            const outputEl = document.getElementById('promptOutput');
+            outputEl.select();
+            outputEl.setSelectionRange(0, 99999);
+
+            try {
+                document.execCommand('copy');
+                showToast(`คัดลอก Prompt (${state.platform === 'gemini' ? 'Gemini' : 'ChatGPT'} Mode) สำเร็จ!`);
+            } catch (err) {
+                showToast('ไม่สามารถคัดลอกอัตโนมัติได้ กรุณากด Ctrl+C');
+            }
+            window.getSelection().removeAllRanges();
+        }
+
+        // Toast Notification Helper
+        let toastTimeout;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.textContent = message;
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2600);
+        }
+
+        // Initialize on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            generatePrompt();
+        });
+    </script>
+</body>
+</html>
